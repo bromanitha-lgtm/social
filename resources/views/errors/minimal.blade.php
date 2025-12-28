@@ -248,7 +248,7 @@
         <!-- Logo -->
         <a href="{{ url('/') }}" class="logo fade-in">
             <div class="logo-icon">E</div>
-            <div class="logo-text">Edu<span>Learn</span></div>
+            <div class="logo-text">Art<span>icle</span></div>
         </a>
 
         <!-- Main Content -->
