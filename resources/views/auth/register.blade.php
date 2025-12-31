@@ -15,8 +15,8 @@
                             <label for="name" class="col-md-4 col-form-label text-md-end">{{ __('Name') }}</label>
 
                             <div class="col-md-6">
-                                <input id="name" type="text" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name') }}" required autocomplete="name" autofocus>
-                                 {{-- <input id="name lName" type="text" class="form-control @error('lName') is-invalid @enderror" name="lName" value="{{ old('lName') }}" required autocomplete="lName" autofocus> --}}
+                                <input id="fName" type="text" class="form-control @error('fName') is-invalid @enderror" name="fName" value="{{ old('fName') }}" required autocomplete="fName" autofocus>
+                                <input id="lName" type="text" class="form-control @error('lName') is-invalid @enderror" name="lName" value="{{ old('lName') }}" required autocomplete="lName" autofocus>
 
                                 @error('fName')
                                     <span class="invalid-feedback" role="alert">
@@ -38,6 +38,22 @@
                                 <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email">
 
                                 @error('email')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="number" class="col-md-4 col-form-label text-md-end">{{ __('Mobile number') }}</label>
+
+                            <div class="col-md-6">
+<input id="mobNumber" type="text"
+       class="form-control @error('mobNumber') is-invalid @enderror"
+       name="mobNumber" value="{{ old('mobNumber') }}"
+       required pattern="[0-9]{9,20}" autocomplete="mobNumber">
+                                @error('mobNumber')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
                                     </span>
