@@ -23,12 +23,25 @@ Route::get('/welcome', function () {
 
 // ======================================== test file ====================================
 
-Route::resource('posts', PostController::class);
-// routes/web.php
-Route::get('/debug-image', function() {
-    return view('test.posts.debug-image');
+// Posts Routes
+Route::middleware(['auth'])->group(function () {
+    Route::resource('posts', PostController::class)->except(['show']);
+    
+    // Post Likes
+    Route::post('/posts/{post}/like', [PostController::class, 'like'])
+        ->name('posts.like');
+    Route::post('/posts/{post}/unlike', [PostController::class, 'unlike'])
+        ->name('posts.unlike');
+    
+    // Post Comments
+    Route::post('/posts/{post}/comment', [PostController::class, 'comment'])
+        ->name('posts.comment');
 });
 
+// Public Post Routes
+Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
+Route::get('/posts/search', [PostController::class, 'search'])->name('posts.search');
+Route::get('/posts/popular', [PostController::class, 'popular'])->name('posts.popular');
 // ========================================================================================
 
 Auth::routes();

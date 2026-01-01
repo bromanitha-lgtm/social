@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -11,47 +12,19 @@ use Illuminate\Support\Str;
 class PostController extends Controller
 {
     /**
-     * Constructor - Apply middleware
+     * Display a listing of the resource.
      */
-    public function __construct()
+    public function index()
     {
-        $this->middleware('auth')->except(['index', 'show']);
-    }
-
-    /**
-     * Display all posts
-     */
-    public function index(Request $request)
-    {
-        // Start query with user relationship
-        $query = Post::with('user');
+        $posts = Post::with('user')
+                    ->latest()
+                    ->paginate(10);
         
-        // Search functionality
-        if ($request->has('search') && $request->search != '') {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('content', 'like', "%{$search}%");
-            });
-        }
-        
-        // Order by
-        $order = $request->get('order', 'newest');
-        if ($order == 'oldest') {
-            $query->oldest();
-        } else {
-            $query->latest();
-        }
-        
-        // Paginate results (12 per page)
-        $posts = $query->paginate(12);
-        
-        // Return view from test folder
         return view('test.posts.index', compact('posts'));
     }
 
     /**
-     * Show the form for creating a new post
+     * Show the form for creating a new resource.
      */
     public function create()
     {
@@ -59,151 +32,216 @@ class PostController extends Controller
     }
 
     /**
-     * Store a newly created post
+     * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        // Validate the input
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048', // 2MB max
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
-        
-        // Handle image upload if exists
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            // Generate unique filename
-            $image = $request->file('image');
-            
-            // Method 1: Using uniqid() + timestamp (recommended)
-            $filename = uniqid() . '_' . time() . '.' . $image->getClientOriginalExtension();
-            
-            // Method 2: Using UUID (alternative)
-            // $filename = Str::uuid() . '.' . $image->getClientOriginalExtension();
-            
-            // Store image with unique filename
-            $imagePath = $image->storeAs('posts', $filename, 'public');
-            
-            // Log for debugging (optional)
-            \Log::info('Image uploaded:', [
-                'original_name' => $image->getClientOriginalName(),
-                'stored_as' => $filename,
-                'path' => $imagePath,
-                'user_id' => Auth::id()
-            ]);
-        }
-        
-        // Create the post
-        Post::create([
+
+        $data = [
             'user_id' => Auth::id(),
             'title' => $request->title,
             'content' => $request->content,
-            'image' => $imagePath,
-        ]);
-        
-        // Redirect with success message
-        return redirect()->route('posts.index')
-            ->with('success', 'Post created successfully!');
+            'views' => 0,
+            'likes_count' => 0,
+            'comments_count' => 0
+        ];
+
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('posts', 'public');
+            $data['image'] = $imagePath;
+        }
+
+        $post = Post::create($data);
+
+        return redirect()->route('posts.show', $post)
+                        ->with('success', 'Post created successfully!');
     }
 
     /**
-     * Display a single post
+     * Display the specified resource.
      */
     public function show(Post $post)
     {
-        // Load post with user relationship
-        $post->load('user');
+        // Increment views
+        $post->increment('views');
         
-        // Increment views if needed (future feature)
-        // $post->increment('views');
+        // Load relationships
+        $post->load('user', 'comments.user');
         
-        // Return single post view
-        return view('test.posts.show', compact('post'));
+        // Check if user liked the post
+        $isLiked = false;
+        if (Auth::check()) {
+            $isLiked = $post->isLikedBy(Auth::user());
+        }
+
+        return view('test.posts.show', compact('post', 'isLiked'));
     }
 
     /**
-     * Show the form for editing a post
+     * Show the form for editing the specified resource.
      */
     public function edit(Post $post)
     {
-        // Check authorization - only post owner can edit
-        if ($post->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized action.');
-        }
+        // Check authorization
+        $this->authorize('update', $post);
         
         return view('test.posts.edit', compact('post'));
     }
 
     /**
-     * Update the specified post
+     * Update the specified resource in storage.
      */
     public function update(Request $request, Post $post)
     {
         // Check authorization
-        if ($post->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized action.');
-        }
-        
-        // Validate input
+        $this->authorize('update', $post);
+
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
-        
-        // Handle image update
+
+        $data = [
+            'title' => $request->title,
+            'content' => $request->content
+        ];
+
         if ($request->hasFile('image')) {
             // Delete old image if exists
-            if ($post->image) {
+            if ($post->image && Storage::disk('public')->exists($post->image)) {
                 Storage::disk('public')->delete($post->image);
             }
             
-            // Generate unique filename for new image
-            $image = $request->file('image');
-            $filename = uniqid() . '_' . time() . '.' . $image->getClientOriginalExtension();
-            $post->image = $image->storeAs('posts', $filename, 'public');
+            $imagePath = $request->file('image')->store('posts', 'public');
+            $data['image'] = $imagePath;
         }
-        
-        // Handle image removal if checkbox is checked
-        if ($request->has('remove_image') && $request->remove_image == '1') {
-            // Delete old image if exists
-            if ($post->image) {
-                Storage::disk('public')->delete($post->image);
-                $post->image = null;
-            }
-        }
-        
-        // Update post details
-        $post->title = $request->title;
-        $post->content = $request->content;
-        $post->save();
-        
-        // Redirect with success message
+
+        $post->update($data);
+
         return redirect()->route('posts.show', $post)
-            ->with('success', 'Post updated successfully!');
+                        ->with('success', 'Post updated successfully!');
     }
 
     /**
-     * Remove the specified post
+     * Remove the specified resource from storage.
      */
     public function destroy(Post $post)
     {
         // Check authorization
-        if ($post->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized action.');
-        }
-        
+        $this->authorize('delete', $post);
+
         // Delete image if exists
-        if ($post->image) {
+        if ($post->image && Storage::disk('public')->exists($post->image)) {
             Storage::disk('public')->delete($post->image);
         }
-        
-        // Delete the post
+
         $post->delete();
-        
-        // Redirect with success message
+
         return redirect()->route('posts.index')
-            ->with('success', 'Post deleted successfully!');
+                        ->with('success', 'Post deleted successfully!');
+    }
+
+    /**
+     * Like a post
+     */
+    public function like(Post $post)
+    {
+        $user = Auth::user();
+
+        if (!$post->isLikedBy($user)) {
+            $post->likes()->create(['user_id' => $user->id]);
+            $post->increment('likes_count');
+            
+            return response()->json([
+                'success' => true,
+                'likes_count' => $post->likes_count,
+                'message' => 'Post liked successfully!'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'You already liked this post!'
+        ], 400);
+    }
+
+    /**
+     * Unlike a post
+     */
+    public function unlike(Post $post)
+    {
+        $user = Auth::user();
+
+        $like = $post->likes()->where('user_id', $user->id)->first();
+
+        if ($like) {
+            $like->delete();
+            $post->decrement('likes_count');
+            
+            return response()->json([
+                'success' => true,
+                'likes_count' => $post->likes_count,
+                'message' => 'Post unliked successfully!'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'You have not liked this post!'
+        ], 400);
+    }
+
+    /**
+     * Add comment to post
+     */
+    public function comment(Request $request, Post $post)
+    {
+        $request->validate([
+            'content' => 'required|string|max:1000'
+        ]);
+
+        $comment = $post->comments()->create([
+            'user_id' => Auth::id(),
+            'content' => $request->content
+        ]);
+
+        $post->increment('comments_count');
+
+        return redirect()->route('posts.show', $post)
+                        ->with('success', 'Comment added successfully!');
+    }
+
+    /**
+     * Search posts
+     */
+    public function search(Request $request)
+    {
+        $query = $request->get('q');
+        
+        $posts = Post::with('user')
+                    ->where('title', 'like', "%{$query}%")
+                    ->orWhere('content', 'like', "%{$query}%")
+                    ->latest()
+                    ->paginate(10);
+        
+        return view('test.posts.index', compact('posts', 'query'));
+    }
+
+    /**
+     * Get popular posts
+     */
+    public function popular()
+    {
+        $posts = Post::with('user')
+                    ->popular()
+                    ->paginate(10);
+        
+        return view('test.posts.index', compact('posts'));
     }
 }

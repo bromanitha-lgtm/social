@@ -4,77 +4,115 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Post extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'user_id',
         'title',
         'content',
-        'image'
+        'image',
+        'views',
+        'likes_count',
+        'comments_count'
+    ];
+
+    protected $casts = [
+        'views' => 'integer',
+        'likes_count' => 'integer',
+        'comments_count' => 'integer'
     ];
 
     /**
      * Get the user that owns the post.
      */
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     /**
      * Get the comments for the post.
-     * (අනාගතයට - comments feature එකතු කරද්දි)
      */
-    public function comments()
+    public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
     }
 
     /**
-     * Scope a query to only include popular posts.
-     * (අනාගතයට - likes/views count අනුව)
+     * Get the likes for the post.
+     */
+    public function likes(): HasMany
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    /**
+     * Check if a user has liked the post.
+     */
+    public function isLikedBy(User $user): bool
+    {
+        return $this->likes()->where('user_id', $user->id)->exists();
+    }
+
+    /**
+     * Scope for popular posts.
      */
     public function scopePopular($query)
     {
-        return $query->orderBy('views', 'desc');
+        return $query->orderBy('views', 'desc')
+                    ->orderBy('likes_count', 'desc');
     }
 
     /**
-     * Get the post's image URL.
-     * If no image, return a placeholder.
+     * Scope for latest posts.
      */
-    public function getImageUrlAttribute()
+    public function scopeLatest($query)
     {
-        if ($this->image) {
-            return asset('storage/' . $this->image);
+        return $query->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get excerpt of the content.
+     */
+    public function excerpt($length = 150): string
+    {
+        return strlen($this->content) > $length 
+            ? substr($this->content, 0, $length) . '...' 
+            : $this->content;
+    }
+
+    /**
+     * Get the post image URL.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image) {
+            return null;
         }
-        return 'https://via.placeholder.com/800x400?text=No+Image';
+        
+        return asset('storage/' . $this->image);
     }
 
     /**
-     * Get excerpt of the post content.
+     * Get formatted created date.
      */
-    public function excerpt($length = 150)
+    public function getFormattedDateAttribute(): string
     {
-        return Str::limit(strip_tags($this->content), $length);
+        return $this->created_at->format('M d, Y');
     }
 
     /**
-     * Check if the post belongs to the authenticated user.
+     * Get reading time in minutes.
      */
-    public function isOwner()
+    public function getReadingTimeAttribute(): int
     {
-        if (auth()->check()) {
-            return $this->user_id == auth()->id();
-        }
-        return false;
+        $wordCount = str_word_count(strip_tags($this->content));
+        $minutes = ceil($wordCount / 200);
+        return max(1, $minutes);
     }
 }
