@@ -1,4 +1,4 @@
-<section id="dashboard" class="page-section active-section">
+<section id="dashboard" class="page-section">
                     
                     <div class="dashboard-grid">
                         <div class="profile-card">

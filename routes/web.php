@@ -38,6 +38,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('posts.comment');
 });
 
+Route::get('/api/posts', [PostController::class, 'apiIndex']);
+
 // Public Post Routes
 Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
 Route::get('/posts/search', [PostController::class, 'search'])->name('posts.search');
