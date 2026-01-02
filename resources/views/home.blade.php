@@ -80,7 +80,7 @@
                 </header>
 
                 <!-- 1. HOME SECTION -->
-                @include('layouts.homeTabs.home')
+                @include('layouts.homeTabs.home') <!-- Posts should be displayed here. -->
 
                 <!-- 2. DASHBOARD SECTION -->
                 @include('layouts.homeTabs.dashboard')

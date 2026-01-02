@@ -7,28 +7,71 @@ use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class PostController extends Controller
 {
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct()
+    {
+        // Apply auth middleware to all methods except show, search, popular, and apiIndex
+        $this->middleware('auth')->except([
+            'show', 'search', 'popular', 'apiIndex', 
+            'getFilteredPosts', 'getTrendingPosts'
+        ]);
+        
+        // Apply additional middleware for specific methods
+        $this->middleware('can:update,post')->only(['edit', 'update']);
+        $this->middleware('can:delete,post')->only(['destroy']);
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $posts = Post::with('user')
-                    ->latest()
-                    ->paginate(6);
+        $query = Post::with(['user'])
+                    ->withCount(['likes', 'comments'])
+                    ->where('status', 'published')
+                    ->latest();
+        
+        // Apply filters if any
+        if ($request->has('filter')) {
+            switch ($request->filter) {
+                case 'popular':
+                    $query->orderBy('likes_count', 'desc')
+                          ->orderBy('views', 'desc');
+                    break;
+                case 'trending':
+                    $query->where('created_at', '>=', now()->subDays(7))
+                          ->orderBy('likes_count', 'desc')
+                          ->orderBy('views', 'desc');
+                    break;
+                case 'drafts':
+                    if (auth()->check()) {
+                        $query->where('user_id', auth()->id())
+                              ->where('status', 'draft');
+                    }
+                    break;
+            }
+        }
+        
+        $posts = $query->paginate(12);
         
         // AJAX request එකක් නම් JSON ලෙස return කරන්න
         if ($request->ajax()) {
             return response()->json([
+                'success' => true,
                 'posts' => $posts->items(),
                 'next_page_url' => $posts->nextPageUrl(),
-                'has_more_pages' => $posts->hasMorePages()
+                'has_more_pages' => $posts->hasMorePages(),
+                'total' => $posts->total()
             ]);
         }
         
-        return view('test.posts.index', compact('posts'));
+        return view('posts.index', compact('posts'));
     }
 
     /**
@@ -36,7 +79,7 @@ class PostController extends Controller
      */
     public function create()
     {
-        return view('test.posts.create');
+        return view('posts.create');
     }
 
     /**
@@ -44,19 +87,33 @@ class PostController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255|min:3',
+            'content' => 'required|string|min:10',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
+            'status' => 'nullable|in:draft,published',
+            'published_at' => 'nullable|date'
         ]);
+
+        if ($validator->fails()) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
 
         $data = [
             'user_id' => Auth::id(),
             'title' => $request->title,
             'content' => $request->content,
-            'views' => 0,
-            'likes_count' => 0,
-            'comments_count' => 0
+            'status' => $request->status ?? 'published',
+            'published_at' => $request->published_at ?? now()
         ];
 
         if ($request->hasFile('image')) {
@@ -65,6 +122,15 @@ class PostController extends Controller
         }
 
         $post = Post::create($data);
+
+        // Clear any draft in localStorage
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Post created successfully!',
+                'redirect' => route('posts.show', $post)
+            ]);
+        }
 
         return redirect()->route('posts.show', $post)
                         ->with('success', 'Post created successfully!');
@@ -79,15 +145,23 @@ class PostController extends Controller
         $post->increment('views');
         
         // Load relationships
-        $post->load('user', 'comments.user');
+        $post->load(['user', 'comments.user', 'likes.user']);
         
         // Check if user liked the post
         $isLiked = false;
         if (Auth::check()) {
-            $isLiked = $post->isLikedBy(Auth::user());
+            $isLiked = $post->likes()->where('user_id', Auth::id())->exists();
         }
 
-        return view('test.posts.show', compact('post', 'isLiked'));
+        // Get related posts
+        $relatedPosts = Post::where('user_id', $post->user_id)
+                          ->where('id', '!=', $post->id)
+                          ->withCount(['likes', 'comments'])
+                          ->latest()
+                          ->limit(4)
+                          ->get();
+
+        return view('posts.show', compact('post', 'isLiked', 'relatedPosts'));
     }
 
     /**
@@ -95,10 +169,8 @@ class PostController extends Controller
      */
     public function edit(Post $post)
     {
-        // Check authorization
-        $this->authorize('update', $post);
-        
-        return view('test.posts.edit', compact('post'));
+        // Authorization is handled by middleware
+        return view('posts.edit', compact('post'));
     }
 
     /**
@@ -106,20 +178,46 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post)
     {
-        // Check authorization
-        $this->authorize('update', $post);
-
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+        // Authorization is handled by middleware
+        
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255|min:3',
+            'content' => 'required|string|min:10',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'status' => 'nullable|in:draft,published',
+            'remove_image' => 'nullable|boolean',
+            'published_at' => 'nullable|date'
         ]);
+
+        if ($validator->fails()) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
 
         $data = [
             'title' => $request->title,
-            'content' => $request->content
+            'content' => $request->content,
+            'status' => $request->status ?? $post->status,
+            'published_at' => $request->published_at ?? $post->published_at
         ];
 
+        // Handle image removal
+        if ($request->has('remove_image') && $request->remove_image) {
+            if ($post->image && Storage::disk('public')->exists($post->image)) {
+                Storage::disk('public')->delete($post->image);
+                $data['image'] = null;
+            }
+        }
+
+        // Handle new image upload
         if ($request->hasFile('image')) {
             // Delete old image if exists
             if ($post->image && Storage::disk('public')->exists($post->image)) {
@@ -132,6 +230,14 @@ class PostController extends Controller
 
         $post->update($data);
 
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Post updated successfully!',
+                'post' => $post->fresh()
+            ]);
+        }
+
         return redirect()->route('posts.show', $post)
                         ->with('success', 'Post updated successfully!');
     }
@@ -141,15 +247,21 @@ class PostController extends Controller
      */
     public function destroy(Post $post)
     {
-        // Check authorization
-        $this->authorize('delete', $post);
-
+        // Authorization is handled by middleware
+        
         // Delete image if exists
         if ($post->image && Storage::disk('public')->exists($post->image)) {
             Storage::disk('public')->delete($post->image);
         }
 
         $post->delete();
+
+        if (request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Post deleted successfully!'
+            ]);
+        }
 
         return redirect()->route('posts.index')
                         ->with('success', 'Post deleted successfully!');
@@ -161,22 +273,40 @@ class PostController extends Controller
     public function like(Post $post)
     {
         $user = Auth::user();
-
-        if (!$post->isLikedBy($user)) {
-            $post->likes()->create(['user_id' => $user->id]);
-            $post->increment('likes_count');
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please login to like posts.'
+            ], 401);
+        }
+        
+        // Check if already liked
+        $existingLike = $post->likes()->where('user_id', $user->id)->first();
+        
+        if ($existingLike) {
+            // Unlike the post
+            $existingLike->delete();
+            $post->decrement('likes_count');
             
             return response()->json([
                 'success' => true,
+                'action' => 'unliked',
                 'likes_count' => $post->fresh()->likes_count,
-                'message' => 'Post liked successfully!'
+                'message' => 'Post unliked successfully!'
             ]);
         }
-
+        
+        // Like the post
+        $post->likes()->create(['user_id' => $user->id]);
+        $post->increment('likes_count');
+        
         return response()->json([
-            'success' => false,
-            'message' => 'You already liked this post!'
-        ], 400);
+            'success' => true,
+            'action' => 'liked',
+            'likes_count' => $post->fresh()->likes_count,
+            'message' => 'Post liked successfully!'
+        ]);
     }
 
     /**
@@ -185,9 +315,16 @@ class PostController extends Controller
     public function unlike(Post $post)
     {
         $user = Auth::user();
-
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please login to unlike posts.'
+            ], 401);
+        }
+        
         $like = $post->likes()->where('user_id', $user->id)->first();
-
+        
         if ($like) {
             $like->delete();
             $post->decrement('likes_count');
@@ -198,7 +335,7 @@ class PostController extends Controller
                 'message' => 'Post unliked successfully!'
             ]);
         }
-
+        
         return response()->json([
             'success' => false,
             'message' => 'You have not liked this post!'
@@ -210,17 +347,47 @@ class PostController extends Controller
      */
     public function comment(Request $request, Post $post)
     {
-        $request->validate([
-            'content' => 'required|string|max:1000'
+        $validator = Validator::make($request->all(), [
+            'content' => 'required|string|max:1000|min:1',
+            'parent_id' => 'nullable|exists:comments,id'
         ]);
-
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        $user = Auth::user();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please login to comment.'
+            ], 401);
+        }
+        
         $comment = $post->comments()->create([
-            'user_id' => Auth::id(),
-            'content' => $request->content
+            'user_id' => $user->id,
+            'content' => $request->content,
+            'parent_id' => $request->parent_id
         ]);
-
+        
         $post->increment('comments_count');
-
+        
+        // Load user relationship for response
+        $comment->load('user');
+        
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Comment added successfully!',
+                'comment' => $comment,
+                'comments_count' => $post->fresh()->comments_count
+            ]);
+        }
+        
         return redirect()->route('posts.show', $post)
                         ->with('success', 'Comment added successfully!');
     }
@@ -232,22 +399,28 @@ class PostController extends Controller
     {
         $query = $request->get('q');
         
-        $posts = Post::with('user')
-                    ->where('title', 'like', "%{$query}%")
-                    ->orWhere('content', 'like', "%{$query}%")
+        $posts = Post::with(['user'])
+                    ->withCount(['likes', 'comments'])
+                    ->where('status', 'published')
+                    ->where(function ($q) use ($query) {
+                        $q->where('title', 'like', "%{$query}%")
+                          ->orWhere('content', 'like', "%{$query}%");
+                    })
                     ->latest()
-                    ->paginate(6);
+                    ->paginate(12);
         
         // AJAX request එකක් නම් JSON ලෙස return කරන්න
         if ($request->ajax()) {
             return response()->json([
+                'success' => true,
                 'posts' => $posts->items(),
                 'next_page_url' => $posts->nextPageUrl(),
-                'has_more_pages' => $posts->hasMorePages()
+                'has_more_pages' => $posts->hasMorePages(),
+                'total' => $posts->total()
             ]);
         }
         
-        return view('test.posts.index', compact('posts', 'query'));
+        return view('posts.search', compact('posts', 'query'));
     }
 
     /**
@@ -255,19 +428,182 @@ class PostController extends Controller
      */
     public function popular(Request $request)
     {
-        $posts = Post::with('user')
-                    ->popular()
-                    ->paginate(6);
+        $posts = Post::with(['user'])
+                    ->withCount(['likes', 'comments'])
+                    ->where('status', 'published')
+                    ->orderBy('likes_count', 'desc')
+                    ->orderBy('views', 'desc')
+                    ->paginate(12);
         
         // AJAX request එකක් නම් JSON ලෙස return කරන්න
         if ($request->ajax()) {
             return response()->json([
+                'success' => true,
                 'posts' => $posts->items(),
                 'next_page_url' => $posts->nextPageUrl(),
-                'has_more_pages' => $posts->hasMorePages()
+                'has_more_pages' => $posts->hasMorePages(),
+                'total' => $posts->total()
             ]);
         }
         
-        return view('test.posts.index', compact('posts'));
+        return view('posts.popular', compact('posts'));
+    }
+
+    /**
+     * Get trending posts
+     */
+    public function getTrendingPosts(Request $request)
+    {
+        $posts = Post::with(['user'])
+                    ->withCount(['likes', 'comments'])
+                    ->where('status', 'published')
+                    ->where('created_at', '>=', now()->subDays(7))
+                    ->orderBy('likes_count', 'desc')
+                    ->orderBy('views', 'desc')
+                    ->paginate(12);
+        
+        // AJAX request එකක් නම් JSON ලෙස return කරන්න
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'posts' => $posts->items(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'has_more_pages' => $posts->hasMorePages(),
+                'total' => $posts->total()
+            ]);
+        }
+        
+        return view('posts.trending', compact('posts'));
+    }
+
+    /**
+     * API endpoint for home page posts
+     */
+    public function apiIndex(Request $request)
+    {
+        try {
+            \Log::info('API Index called', ['request' => $request->all()]);
+            
+            $query = Post::with(['user'])
+                        ->withCount(['likes', 'comments'])
+                        ->where('status', 'published');
+            
+            \Log::info('Query built', ['query_count' => $query->count()]);
+            
+            // Apply filters
+            if ($request->has('filter')) {
+                switch ($request->filter) {
+                    case 'popular':
+                        $query->orderBy('likes_count', 'desc')
+                              ->orderBy('views', 'desc');
+                        break;
+                    case 'trending':
+                        $query->where('created_at', '>=', now()->subDays(7))
+                              ->orderBy('likes_count', 'desc')
+                              ->orderBy('views', 'desc');
+                        break;
+                    default:
+                        $query->latest();
+                        break;
+                }
+            } else {
+                $query->latest();
+            }
+            
+            // Apply search if provided
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('content', 'like', "%{$search}%");
+                });
+            }
+            
+            $posts = $query->paginate(9);
+            
+            \Log::info('Posts fetched', ['count' => $posts->count(), 'total' => $posts->total()]);
+            
+            return response()->json([
+                'success' => true,
+                'posts' => $posts->items(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'has_more_pages' => $posts->hasMorePages(),
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+                'total' => $posts->total()
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('API Index Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading posts: ' . $e->getMessage(),
+                'error' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Get filtered posts (for AJAX requests)
+     */
+    public function getFilteredPosts(Request $request)
+    {
+        return $this->apiIndex($request);
+    }
+
+    /**
+     * Get user's posts
+     */
+    public function userPosts(Request $request, $userId = null)
+    {
+        $userId = $userId ?? Auth::id();
+        
+        $posts = Post::with(['user'])
+                    ->withCount(['likes', 'comments'])
+                    ->where('user_id', $userId)
+                    ->where('status', 'published')
+                    ->latest()
+                    ->paginate(12);
+        
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'posts' => $posts->items(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'has_more_pages' => $posts->hasMorePages(),
+                'total' => $posts->total()
+            ]);
+        }
+        
+        return view('posts.user', compact('posts'));
+    }
+
+    /**
+     * Get user's draft posts
+     */
+    public function drafts(Request $request)
+    {
+        $posts = Post::with(['user'])
+                    ->withCount(['likes', 'comments'])
+                    ->where('user_id', Auth::id())
+                    ->where('status', 'draft')
+                    ->latest()
+                    ->paginate(12);
+        
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'posts' => $posts->items(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'has_more_pages' => $posts->hasMorePages(),
+                'total' => $posts->total()
+            ]);
+        }
+        
+        return view('posts.drafts', compact('posts'));
     }
 }

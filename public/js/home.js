@@ -192,3 +192,54 @@
                 }, 200);
             });
         });
+
+
+// ===========================================================================================================
+
+// Quick fix function - Add this to home.blade.php
+window.fixPostsIssue = function() {
+    console.log('Attempting to fix posts issue...');
+    
+    // Method 1: Try direct fetch
+    fetch('/api/posts?page=1')
+        .then(r => r.json())
+        .then(data => {
+            console.log('Direct fetch result:', data);
+            if (data.success) {
+                alert('API is working! Posts count: ' + (data.posts ? data.posts.length : 0));
+                location.reload();
+            } else {
+                alert('API error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(e => {
+            console.error('Direct fetch failed:', e);
+            
+            // Method 2: Try without AJAX headers
+            fetch('/api/posts?page=1&simple=1')
+                .then(r => r.text())
+                .then(text => {
+                    console.log('Simple fetch response:', text.substring(0, 200));
+                    alert('Response (first 200 chars):\n' + text.substring(0, 200));
+                });
+        });
+};
+
+// Add a button to test
+document.addEventListener('DOMContentLoaded', function() {
+    // Add debug button
+    const debugBtn = document.createElement('button');
+    debugBtn.innerHTML = '<i class="fas fa-bug"></i> Debug Posts';
+    debugBtn.style.position = 'fixed';
+    debugBtn.style.bottom = '20px';
+    debugBtn.style.right = '20px';
+    debugBtn.style.zIndex = '9999';
+    debugBtn.style.background = '#dc3545';
+    debugBtn.style.color = 'white';
+    debugBtn.style.border = 'none';
+    debugBtn.style.padding = '10px 15px';
+    debugBtn.style.borderRadius = '5px';
+    debugBtn.style.cursor = 'pointer';
+    debugBtn.onclick = window.fixPostsIssue;
+    document.body.appendChild(debugBtn);
+});

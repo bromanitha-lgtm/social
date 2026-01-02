@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Post;
 
 class HomeController extends Controller
 {
@@ -13,7 +14,6 @@ class HomeController extends Controller
      */
     public function __construct()
     {
-        // middleware or modify
         // $this->middleware('auth');
     }
 
@@ -25,11 +25,23 @@ class HomeController extends Controller
     public function index()
     {
         if (auth()->check()) {
-            // if Login
-            return view('home');
+            // If user is logged in, show home page with posts
+            $posts = Post::with('user')
+                        ->withCount(['likes', 'comments'])
+                        ->latest()
+                        ->take(6)
+                        ->get();
+            
+            return view('home', compact('posts'));
         } else {
-            // if not Login
-            return view('welcome');
+            // If not logged in, show welcome page
+            $posts = Post::with('user')
+                        ->withCount(['likes', 'comments'])
+                        ->latest()
+                        ->take(3)
+                        ->get();
+            
+            return view('welcome', compact('posts'));
         }
     }
 }
