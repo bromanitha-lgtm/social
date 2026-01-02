@@ -7,7 +7,6 @@ use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class PostController extends Controller
 {
@@ -18,15 +17,14 @@ class PostController extends Controller
     {
         $posts = Post::with('user')
                     ->latest()
-                    ->paginate(6); // 12 ක් ලෙස වෙනස් කරන්න
+                    ->paginate(6);
         
         // AJAX request එකක් නම් JSON ලෙස return කරන්න
         if ($request->ajax()) {
-            $view = view('test.posts.partials._post-cards', compact('posts'))->render();
-            
             return response()->json([
-                'html' => $view,
-                'next_page' => $posts->hasMorePages() ? $posts->nextPageUrl() : null
+                'posts' => $posts->items(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'has_more_pages' => $posts->hasMorePages()
             ]);
         }
         
@@ -170,7 +168,7 @@ class PostController extends Controller
             
             return response()->json([
                 'success' => true,
-                'likes_count' => $post->likes_count,
+                'likes_count' => $post->fresh()->likes_count,
                 'message' => 'Post liked successfully!'
             ]);
         }
@@ -196,7 +194,7 @@ class PostController extends Controller
             
             return response()->json([
                 'success' => true,
-                'likes_count' => $post->likes_count,
+                'likes_count' => $post->fresh()->likes_count,
                 'message' => 'Post unliked successfully!'
             ]);
         }
@@ -242,11 +240,10 @@ class PostController extends Controller
         
         // AJAX request එකක් නම් JSON ලෙස return කරන්න
         if ($request->ajax()) {
-            $view = view('test.posts.partials._post-cards', compact('posts'))->render();
-            
             return response()->json([
-                'html' => $view,
-                'next_page' => $posts->hasMorePages() ? $posts->nextPageUrl() : null
+                'posts' => $posts->items(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'has_more_pages' => $posts->hasMorePages()
             ]);
         }
         
@@ -264,11 +261,10 @@ class PostController extends Controller
         
         // AJAX request එකක් නම් JSON ලෙස return කරන්න
         if ($request->ajax()) {
-            $view = view('test.posts.partials._post-cards', compact('posts'))->render();
-            
             return response()->json([
-                'html' => $view,
-                'next_page' => $posts->hasMorePages() ? $posts->nextPageUrl() : null
+                'posts' => $posts->items(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'has_more_pages' => $posts->hasMorePages()
             ]);
         }
         

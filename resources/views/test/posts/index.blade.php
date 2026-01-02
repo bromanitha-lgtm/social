@@ -33,10 +33,10 @@
         </div>
         <div class="col-md-4">
             <div class="btn-group float-end">
-                <a href="{{ route('posts.index') }}" class="btn btn-outline-primary" id="latest-btn">
+                <a href="{{ route('posts.index') }}" class="btn btn-outline-primary {{ !request()->routeIs('posts.popular') ? 'active' : '' }}">
                     <i class="fas fa-clock"></i> Latest
                 </a>
-                <a href="{{ route('posts.popular') }}" class="btn btn-outline-primary" id="popular-btn">
+                <a href="{{ route('posts.popular') }}" class="btn btn-outline-primary {{ request()->routeIs('posts.popular') ? 'active' : '' }}">
                     <i class="fas fa-fire"></i> Popular
                 </a>
             </div>
@@ -45,7 +45,75 @@
 
     <!-- Posts Container -->
     <div class="row" id="posts-container">
-        @include('test.posts.partials._post-cards', ['posts' => $posts])
+        @foreach($posts as $post)
+        <div class="col-md-6 col-lg-4 mb-4 post-item">
+            <div class="card h-100 post-card">
+                @if($post->image)
+                <img src="{{ Storage::url($post->image) }}" class="card-img-top" alt="{{ $post->title }}" style="height: 200px; object-fit: cover;">
+                @endif
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ Str::limit($post->title, 50) }}</h5>
+                    <p class="card-text flex-grow-1">{{ Str::limit(strip_tags($post->content), 100) }}</p>
+                    
+                    <div class="mt-auto">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>
+                                {{ $post->user->name }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                {{ $post->created_at->format('M d, Y') }}
+                            </small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button class="btn btn-sm btn-outline-danger like-btn" 
+                                        data-post-id="{{ $post->id }}"
+                                        data-liked="{{ Auth::check() && $post->isLikedBy(Auth::user()) ? 'true' : 'false' }}">
+                                    <i class="{{ Auth::check() && $post->isLikedBy(Auth::user()) ? 'fas' : 'far' }} fa-heart"></i>
+                                    <span class="like-count ms-1">{{ $post->likes_count }}</span>
+                                </button>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-eye me-1"></i> {{ $post->views }}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="fas fa-comment me-1"></i> {{ $post->comments_count }}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a href="{{ route('posts.show', $post) }}" class="btn btn-outline-primary w-100">
+                                Read More
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endforeach
+        
+        @if($posts->isEmpty())
+        <div class="col-12">
+            <div class="card text-center py-5">
+                <div class="card-body">
+                    <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
+                    <h4>No posts found</h4>
+                    <p class="text-muted">Be the first to create a post!</p>
+                    @auth
+                    <a href="{{ route('posts.create') }}" class="btn btn-primary">
+                        Create Your First Post
+                    </a>
+                    @endauth
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Loading Spinner -->
@@ -61,13 +129,16 @@
     <!-- No More Posts -->
     <div class="row mt-4 d-none" id="no-more-posts">
         <div class="col-12 text-center">
-            <p class="text-muted">No more posts to load</p>
+            <p class="text-muted">
+                <i class="fas fa-check-circle text-success me-2"></i>
+                You've reached the end
+            </p>
         </div>
     </div>
 
-    <!-- Pagination (Fallback for non-JS) -->
-    @if($posts->hasPages() && !request()->ajax())
-    <div class="row mt-4">
+    <!-- Traditional Pagination (hidden when JS is enabled) -->
+    @if($posts->hasPages())
+    <div class="row mt-4" id="traditional-pagination">
         <div class="col-12">
             {{ $posts->links() }}
         </div>
@@ -78,8 +149,10 @@
 
 @push('styles')
 <style>
-    #loading-spinner {
-        min-height: 100px;
+    .btn-outline-primary.active {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
     }
     
     .post-card {
@@ -89,177 +162,266 @@
     .post-card:hover {
         transform: translateY(-5px);
     }
+    
+    #loading-spinner {
+        min-height: 100px;
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 @endpush
 
 @push('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Variables for infinite scroll
         let isLoading = false;
+        let hasMorePages = {{ $posts->hasMorePages() ? 'true' : 'false' }};
         let nextPageUrl = '{{ $posts->nextPageUrl() }}';
-        let currentUrl = window.location.href;
+        let currentPage = {{ $posts->currentPage() }};
         
-        // Scroll event listener for infinite scroll
-        $(window).on('scroll', function() {
-            // Check if user has scrolled to bottom
-            if ($(window).scrollTop() + $(window).height() >= $(document).height() - 300) {
+        // Hide traditional pagination if JS is enabled
+        document.getElementById('traditional-pagination')?.classList.add('d-none');
+        
+        // Function to check if user is near bottom of page
+        function isNearBottom() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
+            
+            // Check if user is within 500px of the bottom
+            return (scrollTop + clientHeight) >= (scrollHeight - 500);
+        }
+        
+        // Scroll event listener
+        window.addEventListener('scroll', function() {
+            if (!isLoading && hasMorePages && isNearBottom()) {
                 loadMorePosts();
             }
         });
         
         // Load more posts function
         function loadMorePosts() {
-            // Don't load if already loading or no more pages
-            if (isLoading || !nextPageUrl) {
+            if (isLoading || !hasMorePages || !nextPageUrl) {
                 return;
             }
             
             isLoading = true;
-            $('#loading-spinner').removeClass('d-none');
             
-            // Add timestamp to prevent caching
-            const url = nextPageUrl + '&ajax=1&_=' + new Date().getTime();
+            // Show loading spinner
+            const loadingSpinner = document.getElementById('loading-spinner');
+            loadingSpinner.classList.remove('d-none');
             
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.html) {
-                        // Append new posts
-                        $('#posts-container').append(response.html);
-                        
-                        // Update next page URL
-                        nextPageUrl = response.next_page;
-                        
-                        if (!nextPageUrl) {
-                            // Show "no more posts" message
-                            $('#no-more-posts').removeClass('d-none');
-                        }
-                    }
+            // Add AJAX parameter to URL
+            const loadUrl = nextPageUrl + (nextPageUrl.includes('?') ? '&' : '?') + 'ajax=1';
+            
+            fetch(loadUrl, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.posts && data.posts.length > 0) {
+                    // Render new posts
+                    renderPosts(data.posts);
                     
-                    // Re-initialize like buttons for new posts
-                    initializeLikeButtons();
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error loading more posts:', error);
-                },
-                complete: function() {
-                    isLoading = false;
-                    $('#loading-spinner').addClass('d-none');
+                    // Update pagination info
+                    hasMorePages = data.has_more_pages;
+                    nextPageUrl = data.next_page_url;
+                    currentPage++;
+                } else {
+                    // No more posts
+                    hasMorePages = false;
+                }
+                
+                // If no more pages, show "no more posts" message
+                if (!hasMorePages) {
+                    setTimeout(() => {
+                        document.getElementById('no-more-posts').classList.remove('d-none');
+                    }, 500);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading more posts:', error);
+                hasMorePages = false; // Stop trying on error
+            })
+            .finally(() => {
+                isLoading = false;
+                loadingSpinner.classList.add('d-none');
+            });
+        }
+        
+        // Function to render posts
+        function renderPosts(posts) {
+            const postsContainer = document.getElementById('posts-container');
+            
+            posts.forEach(post => {
+                // Create post HTML
+                const postHtml = `
+                    <div class="col-md-6 col-lg-4 mb-4 post-item fade-in">
+                        <div class="card h-100 post-card">
+                            ${post.image ? 
+                                `<img src="/storage/${post.image}" class="card-img-top" alt="${post.title}" style="height: 200px; object-fit: cover;">` 
+                                : ''}
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">${post.title.substring(0, 50)}${post.title.length > 50 ? '...' : ''}</h5>
+                                <p class="card-text flex-grow-1">${post.content.substring(0, 100).replace(/<[^>]*>/g, '')}${post.content.length > 100 ? '...' : ''}</p>
+                                
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>
+                                            ${post.user.name}
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            ${new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-danger like-btn" 
+                                                    data-post-id="${post.id}"
+                                                    data-liked="false">
+                                                <i class="far fa-heart"></i>
+                                                <span class="like-count ms-1">${post.likes_count}</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-eye me-1"></i> ${post.views}
+                                            </small>
+                                            <small class="text-muted">
+                                                <i class="fas fa-comment me-1"></i> ${post.comments_count}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <a href="/posts/${post.id}" class="btn btn-outline-primary w-100">
+                                            Read More
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Append post to container
+                postsContainer.insertAdjacentHTML('beforeend', postHtml);
+            });
+            
+            // Re-initialize like buttons for new posts
+            initializeLikeButtons();
+        }
+        
+        // Event delegation for like buttons (works for dynamically added buttons)
+        function initializeLikeButtons() {
+            // Use event delegation for like buttons
+            document.getElementById('posts-container').addEventListener('click', function(e) {
+                const likeBtn = e.target.closest('.like-btn');
+                
+                if (likeBtn) {
+                    e.preventDefault();
+                    handleLikeClick(likeBtn);
                 }
             });
         }
         
-        // Initialize like buttons functionality
-        function initializeLikeButtons() {
-            $('.like-btn').off('click').on('click', function(e) {
-                e.preventDefault();
-                const button = $(this);
-                const postId = button.data('post-id');
-                const isLiked = button.data('liked') === 'true';
-                
-                $.ajax({
-                    url: isLiked ? `/posts/${postId}/unlike` : `/posts/${postId}/like`,
-                    type: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
-                    dataType: 'json',
-                    success: function(data) {
-                        if (data.success) {
-                            const likeCount = button.find('.like-count');
-                            const likeIcon = button.find('i');
-                            
-                            if (isLiked) {
-                                button.data('liked', 'false');
-                                likeIcon.removeClass('fas').addClass('far');
-                                button.removeClass('text-danger');
-                            } else {
-                                button.data('liked', 'true');
-                                likeIcon.removeClass('far').addClass('fas');
-                                button.addClass('text-danger');
-                            }
-                            
-                            if (likeCount.length) {
-                                likeCount.text(data.likes_count);
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error:', error);
+        // Handle like button click
+        function handleLikeClick(button) {
+            const postId = button.dataset.postId;
+            const isLiked = button.dataset.liked === 'true';
+            const likeIcon = button.querySelector('i');
+            const likeCount = button.querySelector('.like-count');
+            
+            // Update UI immediately for better UX
+            if (isLiked) {
+                button.dataset.liked = 'false';
+                likeIcon.classList.remove('fas', 'text-danger');
+                likeIcon.classList.add('far');
+            } else {
+                button.dataset.liked = 'true';
+                likeIcon.classList.remove('far');
+                likeIcon.classList.add('fas', 'text-danger');
+            }
+            
+            // Send AJAX request
+            fetch(isLiked ? `/posts/${postId}/unlike` : `/posts/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update like count
+                    if (likeCount) {
+                        likeCount.textContent = data.likes_count;
                     }
-                });
+                } else {
+                    // Revert UI if failed
+                    if (isLiked) {
+                        button.dataset.liked = 'true';
+                        likeIcon.classList.remove('far');
+                        likeIcon.classList.add('fas', 'text-danger');
+                    } else {
+                        button.dataset.liked = 'false';
+                        likeIcon.classList.remove('fas', 'text-danger');
+                        likeIcon.classList.add('far');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert UI on error
+                if (isLiked) {
+                    button.dataset.liked = 'true';
+                    likeIcon.classList.remove('far');
+                    likeIcon.classList.add('fas', 'text-danger');
+                } else {
+                    button.dataset.liked = 'false';
+                    likeIcon.classList.remove('fas', 'text-danger');
+                    likeIcon.classList.add('far');
+                }
             });
         }
         
-        // Initialize like buttons on page load
+        // Initialize like buttons for initial posts
         initializeLikeButtons();
         
-        // Handle search form submission with AJAX
-        $('#search-form').on('submit', function(e) {
-            e.preventDefault();
-            const query = $('#search-input').val();
-            const url = '{{ route("posts.search") }}?q=' + encodeURIComponent(query) + '&ajax=1';
-            
-            loadPage(url);
-        });
-        
-        // Handle latest/popular links with AJAX
-        $('#latest-btn, #popular-btn').on('click', function(e) {
-            e.preventDefault();
-            const url = $(this).attr('href') + '?ajax=1';
-            
-            loadPage(url);
-        });
-        
-        // Function to load a page with AJAX
-        function loadPage(url) {
-            isLoading = true;
-            $('#loading-spinner').removeClass('d-none');
-            $('#no-more-posts').addClass('d-none');
-            
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.html) {
-                        // Replace posts container content
-                        $('#posts-container').html(response.html);
-                        
-                        // Update next page URL
-                        nextPageUrl = response.next_page;
-                        currentUrl = url;
-                        
-                        if (!nextPageUrl) {
-                            $('#no-more-posts').removeClass('d-none');
-                        }
-                    }
-                    
-                    // Re-initialize like buttons
-                    initializeLikeButtons();
-                    
-                    // Scroll to top
-                    $('html, body').animate({ scrollTop: 0 }, 300);
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error loading page:', error);
-                    // Fallback to normal page load
-                    window.location.href = url.replace('&ajax=1', '');
-                },
-                complete: function() {
-                    isLoading = false;
-                    $('#loading-spinner').addClass('d-none');
-                }
-            });
+        // Initial check for "no more posts"
+        if (!hasMorePages && document.querySelectorAll('.post-item').length > 0) {
+            document.getElementById('no-more-posts').classList.remove('d-none');
         }
         
-        // Initial check for no more posts
-        if (!nextPageUrl && $('#posts-container .col-md-6').length > 0) {
-            $('#no-more-posts').removeClass('d-none');
-        }
+        // Optional: Load more immediately if page is not filled
+        setTimeout(() => {
+            const postsContainer = document.getElementById('posts-container');
+            if (postsContainer && postsContainer.offsetHeight < window.innerHeight && hasMorePages) {
+                loadMorePosts();
+            }
+        }, 1000);
     });
 </script>
 @endpush
