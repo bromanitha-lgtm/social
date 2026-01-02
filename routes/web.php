@@ -38,31 +38,11 @@ Route::get('/posts/popular', [PostController::class, 'popular'])->name('posts.po
 Route::get('/posts/trending', [PostController::class, 'getTrendingPosts'])->name('posts.trending');
 Route::get('/user/{user}/posts', [PostController::class, 'userPosts'])->name('posts.user.show');
 
+Route::resource('posts', PostController::class);
+Route::post('/posts/{post}/like', [PostController::class, 'like'])->name('posts.like');
+Route::post('/posts/{post}/unlike', [PostController::class, 'unlike'])->name('posts.unlike');
+Route::post('/posts/{post}/comment', [PostController::class, 'comment'])->name('posts.comment');
+
 Auth::routes();
 
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-
-// Test route for debugging
-Route::get('/test-api', function() {
-    try {
-        $posts = \App\Models\Post::with(['user'])
-                    ->withCount(['likes', 'comments'])
-                    ->where('status', 'published')
-                    ->latest()
-                    ->paginate(9);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Test successful',
-            'posts_count' => $posts->count(),
-            'total' => $posts->total(),
-            'posts' => $posts->items()
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ], 500);
-    }
-});
