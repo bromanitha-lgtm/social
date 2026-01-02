@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Schema;
 
 class PostController extends Controller
 {
@@ -21,10 +22,6 @@ class PostController extends Controller
             'show', 'search', 'popular', 'apiIndex', 
             'getFilteredPosts', 'getTrendingPosts'
         ]);
-        
-        // Apply additional middleware for specific methods
-        $this->middleware('can:update,post')->only(['edit', 'update']);
-        $this->middleware('can:delete,post')->only(['destroy']);
     }
 
     /**
@@ -33,9 +30,12 @@ class PostController extends Controller
     public function index(Request $request)
     {
         $query = Post::with(['user'])
-                    ->withCount(['likes', 'comments'])
-                    ->where('status', 'published')
-                    ->latest();
+                    ->withCount(['likes', 'comments']);
+        
+        // Check if status column exists before filtering
+        if (Schema::hasColumn('posts', 'status')) {
+            $query->where('status', 'published');
+        }
         
         // Apply filters if any
         if ($request->has('filter')) {
@@ -55,7 +55,12 @@ class PostController extends Controller
                               ->where('status', 'draft');
                     }
                     break;
+                default:
+                    $query->latest();
+                    break;
             }
+        } else {
+            $query->latest();
         }
         
         $posts = $query->paginate(12);
@@ -90,7 +95,7 @@ class PostController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255|min:3',
             'content' => 'required|string|min:10',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'status' => 'nullable|in:draft,published',
             'published_at' => 'nullable|date'
         ]);
@@ -113,8 +118,12 @@ class PostController extends Controller
             'title' => $request->title,
             'content' => $request->content,
             'status' => $request->status ?? 'published',
-            'published_at' => $request->published_at ?? now()
         ];
+
+        // Add published_at only if column exists
+        if (Schema::hasColumn('posts', 'published_at')) {
+            $data['published_at'] = $request->published_at ?? now();
+        }
 
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('posts', 'public');
@@ -123,7 +132,6 @@ class PostController extends Controller
 
         $post = Post::create($data);
 
-        // Clear any draft in localStorage
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -169,7 +177,11 @@ class PostController extends Controller
      */
     public function edit(Post $post)
     {
-        // Authorization is handled by middleware
+        // Check if user is authorized to edit
+        if (Auth::id() !== $post->user_id) {
+            abort(403, 'Unauthorized action.');
+        }
+        
         return view('posts.edit', compact('post'));
     }
 
@@ -178,7 +190,10 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post)
     {
-        // Authorization is handled by middleware
+        // Check authorization
+        if (Auth::id() !== $post->user_id) {
+            abort(403, 'Unauthorized action.');
+        }
         
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255|min:3',
@@ -205,9 +220,17 @@ class PostController extends Controller
         $data = [
             'title' => $request->title,
             'content' => $request->content,
-            'status' => $request->status ?? $post->status,
-            'published_at' => $request->published_at ?? $post->published_at
         ];
+
+        // Add status only if column exists
+        if (Schema::hasColumn('posts', 'status')) {
+            $data['status'] = $request->status ?? $post->status;
+        }
+
+        // Add published_at only if column exists
+        if (Schema::hasColumn('posts', 'published_at') && $request->has('published_at')) {
+            $data['published_at'] = $request->published_at ?? $post->published_at;
+        }
 
         // Handle image removal
         if ($request->has('remove_image') && $request->remove_image) {
@@ -247,7 +270,10 @@ class PostController extends Controller
      */
     public function destroy(Post $post)
     {
-        // Authorization is handled by middleware
+        // Check authorization
+        if (Auth::id() !== $post->user_id) {
+            abort(403, 'Unauthorized action.');
+        }
         
         // Delete image if exists
         if ($post->image && Storage::disk('public')->exists($post->image)) {
@@ -399,15 +425,20 @@ class PostController extends Controller
     {
         $query = $request->get('q');
         
-        $posts = Post::with(['user'])
-                    ->withCount(['likes', 'comments'])
-                    ->where('status', 'published')
-                    ->where(function ($q) use ($query) {
-                        $q->where('title', 'like', "%{$query}%")
-                          ->orWhere('content', 'like', "%{$query}%");
-                    })
-                    ->latest()
-                    ->paginate(12);
+        $postsQuery = Post::with(['user'])
+                    ->withCount(['likes', 'comments']);
+        
+        // Check if status column exists before filtering
+        if (Schema::hasColumn('posts', 'status')) {
+            $postsQuery->where('status', 'published');
+        }
+        
+        $posts = $postsQuery->where(function ($q) use ($query) {
+                $q->where('title', 'like', "%{$query}%")
+                  ->orWhere('content', 'like', "%{$query}%");
+            })
+            ->latest()
+            ->paginate(12);
         
         // AJAX request එකක් නම් JSON ලෙස return කරන්න
         if ($request->ajax()) {
@@ -428,10 +459,15 @@ class PostController extends Controller
      */
     public function popular(Request $request)
     {
-        $posts = Post::with(['user'])
-                    ->withCount(['likes', 'comments'])
-                    ->where('status', 'published')
-                    ->orderBy('likes_count', 'desc')
+        $postsQuery = Post::with(['user'])
+                    ->withCount(['likes', 'comments']);
+        
+        // Check if status column exists before filtering
+        if (Schema::hasColumn('posts', 'status')) {
+            $postsQuery->where('status', 'published');
+        }
+        
+        $posts = $postsQuery->orderBy('likes_count', 'desc')
                     ->orderBy('views', 'desc')
                     ->paginate(12);
         
@@ -454,10 +490,15 @@ class PostController extends Controller
      */
     public function getTrendingPosts(Request $request)
     {
-        $posts = Post::with(['user'])
-                    ->withCount(['likes', 'comments'])
-                    ->where('status', 'published')
-                    ->where('created_at', '>=', now()->subDays(7))
+        $postsQuery = Post::with(['user'])
+                    ->withCount(['likes', 'comments']);
+        
+        // Check if status column exists before filtering
+        if (Schema::hasColumn('posts', 'status')) {
+            $postsQuery->where('status', 'published');
+        }
+        
+        $posts = $postsQuery->where('created_at', '>=', now()->subDays(7))
                     ->orderBy('likes_count', 'desc')
                     ->orderBy('views', 'desc')
                     ->paginate(12);
@@ -485,8 +526,12 @@ class PostController extends Controller
             \Log::info('API Index called', ['request' => $request->all()]);
             
             $query = Post::with(['user'])
-                        ->withCount(['likes', 'comments'])
-                        ->where('status', 'published');
+                        ->withCount(['likes', 'comments']);
+            
+            // Check if status column exists before filtering
+            if (Schema::hasColumn('posts', 'status')) {
+                $query->where('status', 'published');
+            }
             
             \Log::info('Query built', ['query_count' => $query->count()]);
             
@@ -562,11 +607,16 @@ class PostController extends Controller
     {
         $userId = $userId ?? Auth::id();
         
-        $posts = Post::with(['user'])
+        $postsQuery = Post::with(['user'])
                     ->withCount(['likes', 'comments'])
-                    ->where('user_id', $userId)
-                    ->where('status', 'published')
-                    ->latest()
+                    ->where('user_id', $userId);
+        
+        // Check if status column exists before filtering
+        if (Schema::hasColumn('posts', 'status')) {
+            $postsQuery->where('status', 'published');
+        }
+        
+        $posts = $postsQuery->latest()
                     ->paginate(12);
         
         if ($request->ajax()) {
@@ -587,6 +637,20 @@ class PostController extends Controller
      */
     public function drafts(Request $request)
     {
+        // Check if status column exists
+        if (!Schema::hasColumn('posts', 'status')) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'posts' => [],
+                    'next_page_url' => null,
+                    'has_more_pages' => false,
+                    'total' => 0
+                ]);
+            }
+            return view('posts.drafts', ['posts' => collect()]);
+        }
+        
         $posts = Post::with(['user'])
                     ->withCount(['likes', 'comments'])
                     ->where('user_id', Auth::id())
