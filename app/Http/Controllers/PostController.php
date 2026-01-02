@@ -14,11 +14,21 @@ class PostController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $posts = Post::with('user')
                     ->latest()
-                    ->paginate(10);
+                    ->paginate(6); // 12 ක් ලෙස වෙනස් කරන්න
+        
+        // AJAX request එකක් නම් JSON ලෙස return කරන්න
+        if ($request->ajax()) {
+            $view = view('test.posts.partials._post-cards', compact('posts'))->render();
+            
+            return response()->json([
+                'html' => $view,
+                'next_page' => $posts->hasMorePages() ? $posts->nextPageUrl() : null
+            ]);
+        }
         
         return view('test.posts.index', compact('posts'));
     }
@@ -228,7 +238,17 @@ class PostController extends Controller
                     ->where('title', 'like', "%{$query}%")
                     ->orWhere('content', 'like', "%{$query}%")
                     ->latest()
-                    ->paginate(10);
+                    ->paginate(6);
+        
+        // AJAX request එකක් නම් JSON ලෙස return කරන්න
+        if ($request->ajax()) {
+            $view = view('test.posts.partials._post-cards', compact('posts'))->render();
+            
+            return response()->json([
+                'html' => $view,
+                'next_page' => $posts->hasMorePages() ? $posts->nextPageUrl() : null
+            ]);
+        }
         
         return view('test.posts.index', compact('posts', 'query'));
     }
@@ -236,11 +256,21 @@ class PostController extends Controller
     /**
      * Get popular posts
      */
-    public function popular()
+    public function popular(Request $request)
     {
         $posts = Post::with('user')
                     ->popular()
-                    ->paginate(10);
+                    ->paginate(6);
+        
+        // AJAX request එකක් නම් JSON ලෙස return කරන්න
+        if ($request->ajax()) {
+            $view = view('test.posts.partials._post-cards', compact('posts'))->render();
+            
+            return response()->json([
+                'html' => $view,
+                'next_page' => $posts->hasMorePages() ? $posts->nextPageUrl() : null
+            ]);
+        }
         
         return view('test.posts.index', compact('posts'));
     }
