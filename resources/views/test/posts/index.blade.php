@@ -46,6 +46,9 @@
     <!-- Posts Container -->
     <div class="row" id="posts-container">
         @foreach($posts as $post)
+        @php
+            $isLikedByUser = Auth::check() && $post->isLikedBy(Auth::user());
+        @endphp
         <div class="col-md-6 col-lg-4 mb-4 post-item">
             <div class="card h-100 post-card">
                 @if($post->image)
@@ -71,8 +74,8 @@
                             <div>
                                 <button class="btn btn-sm btn-outline-danger like-btn" 
                                         data-post-id="{{ $post->id }}"
-                                        data-liked="{{ Auth::check() && $post->isLikedBy(Auth::user()) ? 'true' : 'false' }}">
-                                    <i class="{{ Auth::check() && $post->isLikedBy(Auth::user()) ? 'fas' : 'far' }} fa-heart"></i>
+                                        data-liked="{{ $isLikedByUser ? 'true' : 'false' }}">
+                                    <i class="{{ $isLikedByUser ? 'fas' : 'far' }} fa-heart"></i>
                                     <span class="like-count ms-1">{{ $post->likes_count }}</span>
                                 </button>
                             </div>
@@ -175,6 +178,15 @@
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
+    
+    .like-btn.text-danger {
+        border-color: #dc3545;
+    }
+    
+    .like-btn.text-danger:hover {
+        background-color: #dc3545;
+        color: white;
+    }
 </style>
 @endpush
 
@@ -190,6 +202,9 @@
         // Hide traditional pagination if JS is enabled
         document.getElementById('traditional-pagination')?.classList.add('d-none');
         
+        // Initialize like buttons for initial posts
+        initializeLikeButtons();
+        
         // Function to check if user is near bottom of page
         function isNearBottom() {
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -201,10 +216,15 @@
         }
         
         // Scroll event listener
+        let scrollTimeout;
         window.addEventListener('scroll', function() {
-            if (!isLoading && hasMorePages && isNearBottom()) {
-                loadMorePosts();
-            }
+            // Debounce the scroll event
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (!isLoading && hasMorePages && isNearBottom()) {
+                    loadMorePosts();
+                }
+            }, 100);
         });
         
         // Load more posts function
@@ -220,7 +240,7 @@
             loadingSpinner.classList.remove('d-none');
             
             // Add AJAX parameter to URL
-            const loadUrl = nextPageUrl + (nextPageUrl.includes('?') ? '&' : '?') + 'ajax=1';
+            const loadUrl = nextPageUrl + (nextPageUrl.includes('?') ? '&' : '?') + 'ajax=1&_=' + Date.now();
             
             fetch(loadUrl, {
                 headers: {
@@ -243,6 +263,11 @@
                     hasMorePages = data.has_more_pages;
                     nextPageUrl = data.next_page_url;
                     currentPage++;
+                    
+                    // Re-initialize like buttons for new posts
+                    setTimeout(() => {
+                        initializeLikeButtons();
+                    }, 100);
                 } else {
                     // No more posts
                     hasMorePages = false;
@@ -265,12 +290,23 @@
             });
         }
         
-        // Function to render posts
+        // Function to render posts from AJAX
         function renderPosts(posts) {
             const postsContainer = document.getElementById('posts-container');
             
             posts.forEach(post => {
-                // Create post HTML
+                // For AJAX loaded posts, we don't know if user liked them, so default to false
+                const isLikedByUser = false;
+                
+                // Format date
+                const postDate = new Date(post.created_at);
+                const formattedDate = postDate.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                });
+                
+                // Create post HTML - EXACTLY matching the initial posts structure
                 const postHtml = `
                     <div class="col-md-6 col-lg-4 mb-4 post-item fade-in">
                         <div class="card h-100 post-card">
@@ -278,8 +314,8 @@
                                 `<img src="/storage/${post.image}" class="card-img-top" alt="${post.title}" style="height: 200px; object-fit: cover;">` 
                                 : ''}
                             <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">${post.title.substring(0, 50)}${post.title.length > 50 ? '...' : ''}</h5>
-                                <p class="card-text flex-grow-1">${post.content.substring(0, 100).replace(/<[^>]*>/g, '')}${post.content.length > 100 ? '...' : ''}</p>
+                                <h5 class="card-title">${post.title.length > 50 ? post.title.substring(0, 50) + '...' : post.title}</h5>
+                                <p class="card-text flex-grow-1">${post.content.replace(/<[^>]*>/g, '').substring(0, 100)}${post.content.length > 100 ? '...' : ''}</p>
                                 
                                 <div class="mt-auto">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -289,7 +325,7 @@
                                         </small>
                                         <small class="text-muted">
                                             <i class="fas fa-calendar me-1"></i>
-                                            ${new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            ${formattedDate}
                                         </small>
                                     </div>
                                     
@@ -297,8 +333,8 @@
                                         <div>
                                             <button class="btn btn-sm btn-outline-danger like-btn" 
                                                     data-post-id="${post.id}"
-                                                    data-liked="false">
-                                                <i class="far fa-heart"></i>
+                                                    data-liked="${isLikedByUser}">
+                                                <i class="${isLikedByUser ? 'fas' : 'far'} fa-heart"></i>
                                                 <span class="like-count ms-1">${post.likes_count}</span>
                                             </button>
                                         </div>
@@ -327,40 +363,48 @@
                 // Append post to container
                 postsContainer.insertAdjacentHTML('beforeend', postHtml);
             });
-            
-            // Re-initialize like buttons for new posts
-            initializeLikeButtons();
         }
         
-        // Event delegation for like buttons (works for dynamically added buttons)
+        // Initialize like buttons - SIMPLE AND RELIABLE VERSION
         function initializeLikeButtons() {
-            // Use event delegation for like buttons
-            document.getElementById('posts-container').addEventListener('click', function(e) {
-                const likeBtn = e.target.closest('.like-btn');
+            // Remove existing event listeners by replacing buttons
+            document.querySelectorAll('.like-btn').forEach(button => {
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
                 
-                if (likeBtn) {
+                // Add click event to new button
+                newButton.addEventListener('click', function(e) {
                     e.preventDefault();
-                    handleLikeClick(likeBtn);
-                }
+                    e.stopPropagation();
+                    
+                    handleLikeClick(this);
+                });
             });
         }
         
         // Handle like button click
         function handleLikeClick(button) {
-            const postId = button.dataset.postId;
-            const isLiked = button.dataset.liked === 'true';
+            const postId = button.getAttribute('data-post-id');
+            const isLiked = button.getAttribute('data-liked') === 'true';
             const likeIcon = button.querySelector('i');
-            const likeCount = button.querySelector('.like-count');
+            const likeCountSpan = button.querySelector('.like-count');
             
-            // Update UI immediately for better UX
+            // Store original values
+            const originalLikeCount = parseInt(likeCountSpan.textContent);
+            
+            // Immediate UI feedback
             if (isLiked) {
-                button.dataset.liked = 'false';
-                likeIcon.classList.remove('fas', 'text-danger');
-                likeIcon.classList.add('far');
+                // Unlike - update UI immediately
+                button.setAttribute('data-liked', 'false');
+                likeIcon.className = 'far fa-heart';
+                button.classList.remove('text-danger');
+                likeCountSpan.textContent = originalLikeCount - 1;
             } else {
-                button.dataset.liked = 'true';
-                likeIcon.classList.remove('far');
-                likeIcon.classList.add('fas', 'text-danger');
+                // Like - update UI immediately
+                button.setAttribute('data-liked', 'true');
+                likeIcon.className = 'fas fa-heart';
+                button.classList.add('text-danger');
+                likeCountSpan.textContent = originalLikeCount + 1;
             }
             
             // Send AJAX request
@@ -372,43 +416,45 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    // Update like count
-                    if (likeCount) {
-                        likeCount.textContent = data.likes_count;
-                    }
+                    // Update like count with server response
+                    likeCountSpan.textContent = data.likes_count;
                 } else {
-                    // Revert UI if failed
-                    if (isLiked) {
-                        button.dataset.liked = 'true';
-                        likeIcon.classList.remove('far');
-                        likeIcon.classList.add('fas', 'text-danger');
-                    } else {
-                        button.dataset.liked = 'false';
-                        likeIcon.classList.remove('fas', 'text-danger');
-                        likeIcon.classList.add('far');
-                    }
+                    // If failed, revert UI
+                    revertLikeUI(button, isLiked, originalLikeCount);
+                    console.log('Like action failed:', data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 // Revert UI on error
-                if (isLiked) {
-                    button.dataset.liked = 'true';
-                    likeIcon.classList.remove('far');
-                    likeIcon.classList.add('fas', 'text-danger');
-                } else {
-                    button.dataset.liked = 'false';
-                    likeIcon.classList.remove('fas', 'text-danger');
-                    likeIcon.classList.add('far');
-                }
+                revertLikeUI(button, isLiked, originalLikeCount);
             });
         }
         
-        // Initialize like buttons for initial posts
-        initializeLikeButtons();
+        // Revert like UI if request fails
+        function revertLikeUI(button, originalIsLiked, originalLikeCount) {
+            const likeIcon = button.querySelector('i');
+            const likeCountSpan = button.querySelector('.like-count');
+            
+            if (originalIsLiked) {
+                button.setAttribute('data-liked', 'true');
+                likeIcon.className = 'fas fa-heart';
+                button.classList.add('text-danger');
+            } else {
+                button.setAttribute('data-liked', 'false');
+                likeIcon.className = 'far fa-heart';
+                button.classList.remove('text-danger');
+            }
+            likeCountSpan.textContent = originalLikeCount;
+        }
         
         // Initial check for "no more posts"
         if (!hasMorePages && document.querySelectorAll('.post-item').length > 0) {
