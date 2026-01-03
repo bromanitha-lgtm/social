@@ -7,6 +7,14 @@ use App\Http\Controllers\PostController;
 
 // ... existing routes ...
 
+Route::get('/search', function () {
+    return view('layouts.search');
+})->name('search');
+
+Route::get('/welcome', function () {
+    return view('welcome');
+})->name('welcome');
+
 // Posts Routes
 Route::middleware(['auth'])->group(function () {
     Route::resource('posts', PostController::class)->except(['show']);
