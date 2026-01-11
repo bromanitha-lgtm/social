@@ -9,520 +9,835 @@
         @endauth
     </div>
 
-    <!-- Search Bar -->
-    <div class="home-search-bar">
-        <div class="search-wrapper">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" id="home-search-input" placeholder="Search posts...">
-            <button class="search-btn" id="home-search-btn">
-<i class="fas fa-arrow-right"></i>
-            </button>
+    <!-- Main Content Container -->
+    <div class="home-main-container">
+        <!-- Left: Posts Grid Container -->
+        <div class="posts-main-content">
+            <!-- Search Bar -->
+            <div class="home-search-bar">
+                <div class="search-filters">
+                    <button class="filter-btn active" data-filter="latest">
+                        <i class="fas fa-clock"></i> Latest
+                    </button>
+                    <button class="filter-btn" data-filter="oldest">
+                        <i class="fas fa-history"></i> Oldest
+                    </button>
+                    <button class="filter-btn" data-filter="popular">
+                        <i class="fas fa-fire"></i> Popular
+                    </button>
+                    <button class="filter-btn" data-filter="trending">
+                        <i class="fas fa-chart-line"></i> Trending
+                    </button>
+                </div>
+            </div>
+
+            <!-- Posts Grid -->
+            <div class="posts-grid" id="posts-container">
+                <!-- Posts will be loaded here via AJAX -->
+                <div class="loading-spinner" id="initial-loader">
+                    <div class="spinner"></div>
+                    <p>Loading posts...</p>
+                </div>
+            </div>
+
+            <!-- Loading Spinner (for infinite scroll) -->
+            <div class="loading-spinner" id="loading-spinner" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading more posts...</p>
+            </div>
+
+            <!-- No More Posts Message -->
+            <div class="no-more-posts" id="no-more-posts" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <p>You've reached the end</p>
+            </div>
+
+            <!-- No Posts Found Message -->
+            <div class="no-posts-found" id="no-posts-found" style="display: none;">
+                <div class="empty-state">
+                    <i class="fas fa-newspaper"></i>
+                    <h3>No posts found</h3>
+                    <p>Be the first to create a post!</p>
+                    @auth
+                    <a href="{{ route('posts.create') }}" class="btn-create-post">
+                        <i class="fas fa-plus"></i> Create Your First Post
+                    </a>
+                    @else
+                    <a href="{{ route('login') }}" class="btn-create-post">
+                        <i class="fas fa-sign-in-alt"></i> Login to Create Posts
+                    </a>
+                    @endauth
+                </div>
+            </div>
         </div>
-        <div class="search-filters">
-            <button class="filter-btn active" data-filter="latest">Latest</button>
-            <button class="filter-btn" data-filter="popular">Popular</button>
-            <button class="filter-btn" data-filter="trending">Trending</button>
+
+        <!-- Right: Fixed Profile Card -->
+        <div class="home-sidebar">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="profile-info">
+                        <h3 class="profile-name">John Doe</h3>
+                        <p class="profile-role">Community Member</p>
+                    </div>
+                </div>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-pen"></i>
+                        <div class="stat-details">
+                            <span class="stat-value">12</span>
+                            <span class="stat-label">Posts</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-heart"></i>
+                        <div class="stat-details">
+                            <span class="stat-value">47</span>
+                            <span class="stat-label">Likes</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-comment"></i>
+                        <div class="stat-details">
+                            <span class="stat-value">23</span>
+                            <span class="stat-label">Comments</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <button class="btn-profile-action">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                    <button class="btn-profile-action">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Trending Topics -->
+            <div class="trending-card">
+                <h3 class="trending-title">
+                    <i class="fas fa-hashtag"></i> Trending Topics
+                </h3>
+                <div class="trending-tags">
+                    <span class="trending-tag">#Technology</span>
+                    <span class="trending-tag">#Design</span>
+                    <span class="trending-tag">#Development</span>
+                    <span class="trending-tag">#Tips</span>
+                    <span class="trending-tag">#Community</span>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Posts Grid Container -->
-    <div class="posts-grid" id="posts-container">
-        <!-- Posts will be loaded here via AJAX -->
-        <div class="loading-spinner" id="initial-loader">
-            <div class="spinner"></div>
-            <p>Loading posts...</p>
-        </div>
-    </div>
-
-    <!-- Loading Spinner (for infinite scroll) -->
-    <div class="loading-spinner" id="loading-spinner" style="display: none;">
-        <div class="spinner"></div>
-        <p>Loading more posts...</p>
-    </div>
-
-    <!-- No More Posts Message -->
-    <div class="no-more-posts" id="no-more-posts" style="display: none;">
-        <i class="fas fa-check-circle"></i>
-        <p>You've reached the end</p>
-    </div>
-
-    <!-- No Posts Found Message -->
-    <div class="no-posts-found" id="no-posts-found" style="display: none;">
-        <div class="empty-state">
-            <i class="fas fa-newspaper"></i>
-            <h3>No posts found</h3>
-            <p>Be the first to create a post!</p>
-            @auth
-            <a href="{{ route('posts.create') }}" class="btn-create-post">
-<i class="fas fa-plus"></i> Create Your First Post
-            </a>
-            @else
-            <a href="{{ route('login') }}" class="btn-create-post">
-<i class="fas fa-sign-in-alt"></i> Login to Create Posts
-            </a>
-            @endauth
-        </div>
-    </div>
-
-    {{-- <!-- Debug Info (Remove in production) -->
-    <div class="debug-info" style="display: none; padding: 20px; background: #f5f5f5; border-radius: 8px; margin-top: 20px;">
-        <h4>Debug Information</h4>
-        <div id="debug-content"></div>
-    </div> --}}
 </section>
 
-    <!-- CSRF Token -->
+<!-- CSRF Token -->
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <style>
-        /* Posts Section Styles */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding: 0 20px;
-        }
+<style>
+    /* Posts Section Styles */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 0 20px;
+    }
 
-        .section-title {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: var(--text-main);
-        }
+    .section-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--text-main);
+    }
 
-        .btn-create-post {
-            background: var(--accent-color);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
+    .btn-create-post {
+        background: var(--primary-color);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
 
-        .btn-create-post:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
-            color: white;
-        }
+    .btn-create-post:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        color: white;
+    }
 
-        /* Search Bar */
-        .home-search-bar {
-            margin-bottom: 30px;
-            padding: 0 20px;
-        }
+    /* Main Container */
+    .home-main-container {
+        display: flex;
+        gap: 30px;
+        padding: 0 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-        .search-wrapper {
-            position: relative;
-            margin-bottom: 15px;
-        }
+    .posts-main-content {
+        flex: 1;
+        min-width: 0;
+    }
 
-        .search-input {
-            width: 100%;
-            padding: 12px 45px 12px 45px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background: var(--card-bg);
-            color: var(--text-main);
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
+    /* Right Sidebar */
+    .home-sidebar {
+        width: 320px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+    }
 
-        .search-input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-        }
+    /* Search Bar - FIXED */
+    .home-search-bar {
+        margin-bottom: 30px;
+    }
 
-        .search-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-        }
+    .search-filters {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        padding: 10px 0;
+    }
 
-        .search-btn {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
+    .filter-btn {
+        padding: 14px 20px;
+        border-radius: 12px;
+        border: 2px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-main);
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+    }
 
-        .search-btn:hover {
-            background: var(--accent-color-dark);
-        }
+    .filter-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
 
-        .search-filters {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
+    .filter-btn:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.15);
+    }
 
-        .filter-btn {
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            background: var(--card-bg);
-            color: var(--text-main);
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-        }
+    .filter-btn:hover::before {
+        left: 100%;
+    }
 
-        .filter-btn:hover {
-            border-color: var(--accent-color);
-            color: var(--accent-color);
-        }
+    .filter-btn.active {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-color: transparent;
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.25);
+        transform: translateY(-2px);
+    }
 
-        .filter-btn.active {
-            background: var(--accent-color);
-            color: white;
-            border-color: var(--accent-color);
-        }
+    .filter-btn.active:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 25px rgba(67, 97, 238, 0.3);
+    }
 
-        /* Posts Grid */
-        .posts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 24px;
-            padding: 0 20px;
-            margin-bottom: 40px;
-            min-height: 300px;
-        }
+    .filter-btn i {
+        font-size: 1rem;
+        transition: transform 0.3s;
+    }
 
-        /* Post Card */
-        .post-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s, box-shadow 0.3s;
-            border: 1px solid var(--border-color);
-            opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInUp 0.5s ease forwards;
-        }
+    .filter-btn.active i {
+        transform: scale(1.1);
+    }
 
-        @keyframes fadeInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+    /* Posts Grid */
+    .posts-grid {
+        display: grid;
+        grid-template-columns: repeat(1fr);
+        gap: 24px;
+        margin-bottom: 40px;
+    }
 
-        .post-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-        }
+    /* Post Card */
+    .post-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        overflow: hidden;
+        max-width: 580px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid var(--border-color);
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.5s ease forwards;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        position: relative;
+        margin-left: auto;
+        margin-right: auto;
+    }
 
-        .post-image-container {
-            position: relative;
-            height: 200px;
-            overflow: hidden;
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
+    }
 
-        .post-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s;
-        }
+    .post-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    }
 
-        .post-card:hover .post-image {
-            transform: scale(1.05);
-        }
+    /* Post Image */
+    .post-image-container {
+        position: relative;
+        height: fit-content;
+        max-height: 580px;
+        overflow: hidden;
+        display: none;
+    }
 
-        .post-placeholder {
-            width: 100%;
-            height: 200px;
-            background: linear-gradient(135deg, #4361ee20, #3a0ca320);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .post-card.has-image .post-image-container {
+        display: block;
+    }
 
-        .post-placeholder i {
-            font-size: 3rem;
-            color: var(--accent-color);
-            opacity: 0.5;
-        }
+    .post-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-        .post-content {
-            padding: 20px;
-        }
+    .post-card:hover .post-image {
+        transform: scale(1.05);
+    }
 
-        .post-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--text-main);
-            line-height: 1.4;
-        }
+    /* Post Content */
+    .post-content {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
 
-        .post-title a {
-            color: inherit;
-            text-decoration: none;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+    .post-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: var(--text-main);
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
 
-        .post-title a:hover {
-            color: var(--accent-color);
-        }
+    .post-excerpt {
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+        line-height: 1.6;
+        font-size: 0.95rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        flex: 1;
+    }
 
-        .post-excerpt {
-            color: var(--text-secondary);
-            margin-bottom: 15px;
-            line-height: 1.6;
-            font-size: 0.95rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+    /* Author Section */
+    .post-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 16px 0;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+    }
 
-        .post-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
+    .author-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
 
-        .author-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    .author-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
 
-        .author-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
+    .author-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
 
-        .author-details {
-            display: flex;
+    .author-name {
+        font-size: 0.95rem;
+        color: var(--text-main);
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .post-date {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        line-height: 1.2;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .post-date i {
+        font-size: 0.8rem;
+    }
+
+    /* Post Stats */
+    .post-stats {
+        display: flex;
+        gap: 20px;
+        margin-top: auto;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        transition: color 0.2s;
+    }
+
+    .stat-item:hover {
+        color: var(--primary-color);
+    }
+
+    .stat-item i {
+        font-size: 1rem;
+    }
+
+    .like-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+    }
+
+    .like-btn:hover {
+        color: #dc3545;
+        background: rgba(220, 53, 69, 0.1);
+    }
+
+    .like-btn.liked {
+        color: #dc3545;
+    }
+
+    .like-btn.liked:hover {
+        color: #c82333;
+    }
+
+    /* Read More Button */
+    .read-more-btn {
+        display: block;
+        text-align: center;
+        padding: 12px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        margin-top: 20px;
+        transition: all 0.3s;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .read-more-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .read-more-btn:hover::before {
+        left: 100%;
+    }
+
+    .read-more-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+    }
+
+    /* Profile Card */
+    .profile-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--border-color);
+        margin-bottom: 24px;
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .profile-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .profile-info {
+        flex: 1;
+    }
+
+    .profile-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: var(--text-main);
+    }
+
+    .profile-role {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .profile-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .profile-stats .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(67, 97, 238, 0.05);
+        transition: all 0.2s;
+    }
+
+    .profile-stats .stat-item:hover {
+        background: rgba(67, 97, 238, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .profile-stats .stat-item i {
+        font-size: 1.2rem;
+        color: var(--primary-color);
+    }
+
+    .stat-details {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .profile-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .btn-profile-action {
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-main);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+    }
+
+    .btn-profile-action:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        transform: translateY(-1px);
+    }
+
+    /* Trending Card */
+    .trending-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--border-color);
+    }
+
+    .trending-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .trending-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .trending-tag {
+        padding: 8px 16px;
+        background: rgba(67, 97, 238, 0.1);
+        color: var(--primary-color);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .trending-tag:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+        text-align: center;
+        padding: 60px;
+        grid-column: 1 / -1;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid var(--border-color);
+        border-top-color: var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .loading-spinner p {
+        color: var(--text-muted);
+        font-size: 1rem;
+    }
+
+    /* No More Posts */
+    .no-more-posts {
+        text-align: center;
+        padding: 40px;
+        grid-column: 1 / -1;
+        color: var(--text-muted);
+    }
+
+    .no-more-posts i {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        color: var(--success-color);
+    }
+
+    .no-more-posts p {
+        font-size: 1rem;
+    }
+
+    /* No Posts Found */
+    .no-posts-found {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 80px 20px;
+    }
+
+    .empty-state {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+        color: var(--text-main);
+    }
+
+    .empty-state p {
+        color: var(--text-secondary);
+        margin-bottom: 25px;
+        font-size: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .home-main-container {
             flex-direction: column;
         }
-
-        .author-name {
-            font-size: 0.9rem;
-            color: var(--text-main);
-            font-weight: 500;
-            line-height: 1.2;
+        
+        .home-sidebar {
+            width: 100%;
+            position: static;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
         }
-
-        .post-date {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            line-height: 1.2;
+        
+        .posts-grid {
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
         }
+    }
 
-        .post-stats {
-            display: flex;
+    @media (max-width: 992px) {
+        .search-filters {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .posts-grid {
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .home-main-container {
+            padding: 0 15px;
+        }
+        
+        .section-header {
+            padding: 0 15px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .posts-grid {
+            grid-template-columns: 1fr;
             gap: 20px;
-            padding-top: 15px;
-            border-top: 1px solid var(--border-color);
         }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-muted);
+        
+        .home-sidebar {
+            grid-template-columns: 1fr;
+        }
+        
+        .search-filters {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .filter-btn {
+            padding: 12px 16px;
             font-size: 0.9rem;
         }
-
-        .stat-item i {
-            font-size: 0.9rem;
+        
+        .post-meta {
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
         }
-
-        .like-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 5px 8px;
-            border-radius: 5px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.9rem;
+        
+        .post-stats {
+            width: 100%;
+            justify-content: space-between;
         }
+    }
 
-        .like-btn:hover {
-            color: #dc3545;
-            background: rgba(220, 53, 69, 0.1);
+    @media (max-width: 480px) {
+        .search-filters {
+            grid-template-columns: 1fr;
         }
-
-        .like-btn.liked {
-            color: #dc3545;
+        
+        .filter-btn {
+            padding: 14px 20px;
         }
-
-        .like-btn.liked:hover {
-            color: #c82333;
+        
+        .profile-stats {
+            grid-template-columns: repeat(3, 1fr);
         }
-
-        .like-btn .like-icon {
-            font-size: 0.9rem;
-        }
-
-        .read-more-btn {
-            display: block;
+        
+        .profile-header {
+            flex-direction: column;
             text-align: center;
-            padding: 10px;
-            background: var(--accent-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            margin-top: 15px;
-            transition: background-color 0.2s;
-            font-weight: 500;
         }
+    }
+</style>
 
-        .read-more-btn:hover {
-            background: var(--accent-color-dark);
-            color: white;
-        }
-
-        /* Loading Spinner */
-        .loading-spinner {
-            text-align: center;
-            padding: 40px;
-            grid-column: 1 / -1;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--border-color);
-            border-top-color: var(--accent-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-spinner p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        /* No More Posts */
-        .no-more-posts {
-            text-align: center;
-            padding: 30px;
-            grid-column: 1 / -1;
-            color: var(--text-muted);
-        }
-
-        .no-more-posts i {
-            font-size: 2rem;
-            margin-bottom: 10px;
-            color: var(--success-color);
-        }
-
-        .no-more-posts p {
-            font-size: 0.95rem;
-        }
-
-        /* No Posts Found */
-        .no-posts-found {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .empty-state {
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: var(--text-main);
-        }
-
-        .empty-state p {
-            color: var(--text-secondary);
-            margin-bottom: 25px;
-            font-size: 1rem;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .posts-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-                padding: 0 15px;
-            }
-            
-            .section-header {
-                padding: 0 15px;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .home-search-bar {
-                padding: 0 15px;
-            }
-            
-            .post-card {
-                margin: 0;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .posts-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .post-stats {
-                gap: 15px;
-                justify-content: space-between;
-            }
-        }
-    </style>
-    <script>
+<script>
     // CSRF Token for AJAX requests
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -554,14 +869,6 @@
         
         // Initialize posts system
         initializePostsSystem();
-        
-        // Initialize search and filter functionality
-        initializeSearchAndFilter();
-        
-        // // Show debug info if in development
-        // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        //     document.querySelector('.debug-info').style.display = 'block';
-        // }
     });
 
     function initializePostsSystem() {
@@ -578,11 +885,14 @@
         let isLoading = false;
         let hasMorePages = true;
         let currentPage = 1;
-        let currentFilter = 'latest';
+        let currentFilter = 'latest'; // Default filter
         let currentSearch = '';
         
         // Load initial posts
         loadPosts();
+        
+        // Initialize filter buttons
+        initializeFilterButtons();
         
         // Scroll event listener for infinite scroll
         let scrollTimeout;
@@ -603,6 +913,26 @@
             }, 100);
         });
         
+        // Initialize filter buttons
+        function initializeFilterButtons() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Update active state
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update filter
+                    currentFilter = this.getAttribute('data-filter');
+                    console.log('Filter changed to:', currentFilter);
+                    
+                    // Reset and load posts with new filter
+                    resetAndLoadPosts();
+                });
+            });
+        }
+        
         // Load posts function
         function loadPosts() {
             if (isLoading || !hasMorePages) {
@@ -620,9 +950,13 @@
             
             // Build URL with parameters
             let url = '/api/posts?page=' + currentPage;
-            if (currentFilter !== 'latest') {
+            
+            // Add filter parameter
+            if (currentFilter && currentFilter !== 'latest') {
                 url += '&filter=' + currentFilter;
             }
+            
+            // Add search parameter if exists
             if (currentSearch) {
                 url += '&search=' + encodeURIComponent(currentSearch);
             }
@@ -662,7 +996,7 @@
                         renderPosts(data.posts);
                         
                         // Update pagination info
-                        hasMorePages = data.has_more_pages;
+                        hasMorePages = data.has_more_pages || data.has_more || false;
                         currentPage++;
                         
                         // Initialize like buttons
@@ -673,9 +1007,6 @@
                         
                         // Hide no posts message if posts exist
                         document.getElementById('no-posts-found').style.display = 'none';
-                        
-                        // Update debug info
-                        // updateDebugInfo(data);
                     } else {
                         hasMorePages = false;
                         
@@ -720,9 +1051,6 @@
                                 <button onclick="resetAndLoadPosts()" class="btn-create-post">
                                     <i class="fas fa-redo"></i> Retry
                                 </button>
-                                <button onclick="testAPI()" class="btn-create-post" style="margin-top: 10px; background: var(--secondary-color);">
-                                    <i class="fas fa-vial"></i> Test API
-                                </button>
                             </div>
                         </div>
                     `;
@@ -758,19 +1086,17 @@
                 year: 'numeric'
             });
             
-            // Extract author information - FIXED: Use the correct property names
+            // Extract author information
             let authorName = 'Unknown';
             let authorInitial = 'U';
             
             if (post.user) {
-                // Check if user has fName and lName properties
                 if (post.user.fName || post.user.lName) {
                     authorName = `${post.user.fName || ''} ${post.user.lName || ''}`.trim();
                 } else if (post.user.name) {
                     authorName = post.user.name;
                 }
                 
-                // Get initial from first character of first name or name
                 if (post.user.fName) {
                     authorInitial = post.user.fName.charAt(0).toUpperCase();
                 } else if (post.user.name) {
@@ -778,7 +1104,6 @@
                 }
             }
             
-            // If authorName is still 'Unknown', try to get from author relationship
             if (authorName === 'Unknown' && post.author) {
                 if (post.author.fName || post.author.lName) {
                     authorName = `${post.author.fName || ''} ${post.author.lName || ''}`.trim();
@@ -786,21 +1111,21 @@
                 }
             }
             
-            // Create excerpt from content (remove HTML tags)
+            // Create excerpt from content
             let excerpt = 'No content available';
             if (post.content) {
                 const plainText = post.content.replace(/<[^>]*>/g, '');
                 excerpt = plainText.length > 120 ? plainText.substring(0, 120) + '...' : plainText;
             }
             
-            // Check if user is logged in for like button
+            // Check if user is logged in
             const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
             
-            // Create image URL
+            // Check if post has image
+            const hasImage = post.image ? true : false;
             const imageUrl = post.image ? '/storage/' + post.image : null;
             
-            // Check if post is liked by current user
-            // First check server response, then localStorage
+            // Check if post is liked
             let isLiked = false;
             if (post.is_liked !== undefined) {
                 isLiked = post.is_liked;
@@ -810,20 +1135,17 @@
             
             // Create card element
             const card = document.createElement('div');
-            card.className = 'post-card';
+            card.className = 'post-card' + (hasImage ? ' has-image' : '');
             card.innerHTML = `
-                <div class="post-image-container">
-                    ${imageUrl ? 
-                        `<img src="${imageUrl}" class="post-image" alt="${post.title || 'Post Image'}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"post-placeholder\"><i class=\"fas fa-newspaper\"></i></div>';">` :
-                        `<div class="post-placeholder">
-                            <i class="fas fa-newspaper"></i>
-                        </div>`
-                    }
-                </div>
+                ${hasImage ? `
+                    <div class="post-image-container">
+                        <img src="${imageUrl}" class="post-image" alt="${post.title || 'Post Image'}" 
+                             onerror="this.onerror=null; this.parentElement.style.display='none'; this.closest('.post-card').classList.remove('has-image');">
+                    </div>
+                ` : ''}
+                
                 <div class="post-content">
-                    <h3 class="post-title">
-                        <a href="/posts/${post.id}">${post.title || 'Untitled Post'}</a>
-                    </h3>
+                    <h3 class="post-title">${post.title || 'Untitled Post'}</h3>
                     <p class="post-excerpt">${excerpt}</p>
                     
                     <div class="post-meta">
@@ -831,7 +1153,10 @@
                             <div class="author-avatar">${authorInitial}</div>
                             <div class="author-details">
                                 <span class="author-name">${authorName}</span>
-                                <span class="post-date">${formattedDate}</span>
+                                <span class="post-date">
+                                    <i class="far fa-calendar"></i>
+                                    ${formattedDate}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -848,20 +1173,28 @@
                             </a>`
                         }
                         <div class="stat-item">
-                            <i class="fas fa-eye"></i>
+                            <i class="far fa-eye"></i>
                             <span>${post.views || 0}</span>
                         </div>
                         <div class="stat-item">
-                            <i class="fas fa-comment"></i>
+                            <i class="far fa-comment"></i>
                             <span>${post.comments_count || 0}</span>
                         </div>
                     </div>
                     
                     <a href="/posts/${post.id}" class="read-more-btn">
-                        Read More <i class="fas fa-arrow-right" style="margin-left: 5px;"></i>
+                        Read Full Article <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
                     </a>
                 </div>
             `;
+            
+            // Make entire card clickable for read more
+            card.addEventListener('click', function(e) {
+                // Don't trigger if clicking on like button or its children
+                if (!e.target.closest('.like-btn') && !e.target.closest('.read-more-btn')) {
+                    window.location.href = `/posts/${post.id}`;
+                }
+            });
             
             return card;
         }
@@ -882,7 +1215,7 @@
             });
         }
         
-        // Handle like button click - FIXED VERSION with localStorage
+        // Handle like button click
         function handleLikeClick(button) {
             const postId = button.getAttribute('data-post-id');
             const isLiked = button.getAttribute('data-liked') === 'true';
@@ -1009,23 +1342,6 @@
             }
         }
         
-        // Update debug information
-        function updateDebugInfo(data) {
-            const debugDiv = document.getElementById('debug-content');
-            if (debugDiv) {
-                debugDiv.innerHTML = `
-                    <p><strong>Current Page:</strong> ${currentPage}</p>
-                    <p><strong>Has More Pages:</strong> ${hasMorePages}</p>
-                    <p><strong>Posts Count:</strong> ${data.posts.length}</p>
-                    <p><strong>Total Posts:</strong> ${data.total || 'N/A'}</p>
-                    <p><strong>Next Page URL:</strong> ${data.next_page_url || 'None'}</p>
-                    <p><strong>Sample Post:</strong> ${data.posts[0]?.title || 'No post'}</p>
-                    <p><strong>Sample Post Author:</strong> ${data.posts[0]?.user ? JSON.stringify(data.posts[0].user) : 'No user data'}</p>
-                    <p><strong>Sample Post is_liked:</strong> ${data.posts[0]?.is_liked !== undefined ? data.posts[0].is_liked : 'Not set'}</p>
-                `;
-            }
-        }
-        
         // Reset and load posts with new parameters
         function resetAndLoadPosts() {
             console.log('Resetting and loading posts...');
@@ -1050,102 +1366,36 @@
             loadPosts();
         }
         
-        // Initialize search and filter functionality
-        function initializeSearchAndFilter() {
-            // Search input
-            const searchInput = document.getElementById('home-search-input');
-            const searchBtn = document.getElementById('home-search-btn');
-            
-            // Filter buttons
-            const filterButtons = document.querySelectorAll('.filter-btn');
-            
-            // Search button click
-            if (searchBtn) {
-                searchBtn.addEventListener('click', function() {
-                    currentSearch = searchInput.value.trim();
-                    console.log('Searching for:', currentSearch);
-                    resetAndLoadPosts();
-                });
-            }
-            
-            // Search on Enter key
-            if (searchInput) {
-                searchInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        currentSearch = this.value.trim();
-                        console.log('Searching for (Enter):', currentSearch);
-                        resetAndLoadPosts();
-                    }
-                });
-            }
-            
-            // Filter button clicks
-            filterButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Update active state
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Update filter
-                    currentFilter = this.getAttribute('data-filter');
-                    console.log('Filter changed to:', currentFilter);
-                    resetAndLoadPosts();
-                });
-            });
-        }
-        
-        // Make functions available globally
+        // Make reset function available globally
         window.resetAndLoadPosts = resetAndLoadPosts;
-        window.testAPI = testAPI;
-    }
-
-    // Test API function
-    function testAPI() {
-        console.log('Testing API endpoints...');
-        
-        // Test basic API endpoint
-        fetch('/api/posts?page=1&_=' + Date.now(), {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => {
-            console.log('API Test Response Status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('API Test Data:', data);
-            alert('API Test: ' + (data.success ? 'SUCCESS' : 'FAILED') + '\n' + 
-                  'Message: ' + (data.message || 'No message') + '\n' +
-                  'Posts Count: ' + (data.posts ? data.posts.length : 0) + '\n' +
-                  'First Post is_liked: ' + (data.posts?.[0]?.is_liked ?? 'Not set'));
-        })
-        .catch(error => {
-            console.error('API Test Error:', error);
-            alert('API Test Failed: ' + error.message);
-        });
     }
 
     // Toast function
     function showToast(message, type = 'normal') {
         const container = document.getElementById('toastContainer');
+        if (!container) {
+            // Create toast container if doesn't exist
+            const toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+            document.body.appendChild(toastContainer);
+        }
+        
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         let icon = 'fa-info-circle'; 
         if (type === 'success') icon = 'fa-check-circle'; 
         if (type === 'error') icon = 'fa-exclamation-circle';
         toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
-        container.appendChild(toast);
-        requestAnimationFrame(() => toast.classList.add('show'));
+        document.getElementById('toastContainer').appendChild(toast);
+        
+        // Add show class with animation
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        // Remove toast after delay
         setTimeout(() => { 
             toast.classList.remove('show'); 
             setTimeout(() => toast.remove(), 400); 
         }, 3000);
     }
-    
-    // Navigation functions from home.js
-    function toggleSidebar() { 
-        document.getElementById('sidebar').classList.toggle('active'); 
-    }
-    </script>
+</script>

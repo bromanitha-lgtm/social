@@ -224,22 +224,3 @@ window.fixPostsIssue = function() {
                 });
         });
 };
-
-// Add a button to test
-document.addEventListener('DOMContentLoaded', function() {
-    // Add debug button
-    const debugBtn = document.createElement('button');
-    debugBtn.innerHTML = '<i class="fas fa-bug"></i> Debug Posts';
-    debugBtn.style.position = 'fixed';
-    debugBtn.style.bottom = '20px';
-    debugBtn.style.right = '20px';
-    debugBtn.style.zIndex = '9999';
-    debugBtn.style.background = '#dc3545';
-    debugBtn.style.color = 'white';
-    debugBtn.style.border = 'none';
-    debugBtn.style.padding = '10px 15px';
-    debugBtn.style.borderRadius = '5px';
-    debugBtn.style.cursor = 'pointer';
-    debugBtn.onclick = window.fixPostsIssue;
-    document.body.appendChild(debugBtn);
-});

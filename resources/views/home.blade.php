@@ -20,23 +20,23 @@
                     <span>{{ config('app.name') }}</span>
                 </div>
                 <nav class="nav-links">
-                    <a href="" class="nav-item active" data-target="home">
+                    <a href="" id="homeBtn" class="nav-item active" data-target="home">
                         <i class="fa-solid fa-house"></i>
                         <span>Home</span>
                     </a>
-                    <a href="" class="nav-item" data-target="profile">
+                    <a href="" id="profileBtn" class="nav-item" data-target="profile">
                         <i class="fas fa-user"></i>
                         <span>My Profile</span>
                     </a>
-                    <a href="" class="nav-item" data-target="dashboard">
+                    <a href="" id="dashboardBtn" class="nav-item" data-target="dashboard">
                         <i class="fas fa-th-large"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="" class="nav-item" data-target="wallet">
+                    <a href="" id="walletBtn" class="nav-item" data-target="wallet">
                         <i class="fas fa-wallet"></i>
                         <span>Wallet</span>
                     </a>
-                    <a href="" class="nav-item" data-target="settings">
+                    <a href="" id="settingsBtn" class="nav-item" data-target="settings">
                         <i class="fas fa-cog"></i>
                         <span>Settings</span>
                     </a>

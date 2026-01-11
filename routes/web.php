@@ -15,6 +15,10 @@ Route::get('/welcome', function () {
     return view('welcome');
 })->name('welcome');
 
+Route::get('/test', function () {
+    return view('test.test');
+})->name('test');
+
 // Posts Routes
 Route::middleware(['auth'])->group(function () {
     Route::resource('posts', PostController::class)->except(['show']);

@@ -15,7 +15,7 @@
                                 </div>
                             </div>
                             <div class="action-buttons">
-                                <button class="btn btn-primary" onclick="showToast('Edit Profile Mode Activated')"><i class="fas fa-pen"></i> Edit</button>
+                                <button class="btn btn-primary" onclick="click('profileBtn')"><i class="fas fa-pen"></i> Edit</button>
                                 <button class="btn btn-outline" onclick="showToast('Profile Link Copied')"><i class="fas fa-share-alt"></i> Share</button>
                             </div>
                         </div>
@@ -66,3 +66,9 @@
                         </div>
                     </section>
                 </section>
+
+                <script>
+                    function click(clickedBtn) {
+                            document.getElementById(clickedBtn).click();
+                    }
+                </script>
