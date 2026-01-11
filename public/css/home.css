@@ -482,17 +482,17 @@ padding: 90px 15px 20px 15px;
 
 
 /* Posts Grid */
-/* .posts-grid {
+.posts-grid {
     display: grid;
     grid-template-columns: repeat(1fr);
     gap: 24px;
     padding: 0 20px;
     margin-bottom: 40px;
     min-height: 300px;
-} */
+}
 
 /* Post Card */
-/* .post-card {
+.post-card {
     background: var(--card-bg);
     max-width: 350px;
     border-radius: 12px;
@@ -503,4 +503,4 @@ padding: 90px 15px 20px 15px;
     opacity: 0;
     transform: translateY(20px);
     animation: fadeInUp 0.5s ease forwards;
-} */
+}
