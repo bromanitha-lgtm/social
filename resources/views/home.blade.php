@@ -59,9 +59,25 @@
                         <button class="menu-toggle" onclick="toggleSidebar()">
                             <i class="fas fa-bars"></i>
                         </button>
-                        <div class="search-wrapper">
+                        <div class="search-wrapper" id="searchWrapper">
                             <i class="fas fa-search search-icon"></i>
-                            <input type="text" class="search-input" placeholder="Search...">
+                            <input type="text" class="search-input" id="searchInput" placeholder="Search users, posts..." autocomplete="off">
+                            
+                            <!-- Live Search Results Dropdown -->
+                            <div class="search-results-dropdown" id="searchResults" style="display: none;">
+                                <div class="search-results-container">
+                                    <div class="search-results-header">
+                                        <span>Search Results</span>
+                                        <small id="resultsCount">0 results</small>
+                                    </div>
+                                    <div class="search-results-body" id="searchResultsBody">
+                                        <!-- Results will be loaded here -->
+                                    </div>
+                                    <div class="search-results-footer">
+                                        <a href="#" id="viewAllResults" style="display: none;">View all results</a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -74,7 +90,7 @@
                             <i class="far fa-envelope"></i>
                         </button>
                         <button class="icon-btn">
-                            <img src="https://picsum.photos/seed/user123/40/40.jpg" alt="User" style="border-radius: 50%; width: 32px; height: 32px;">
+                            <img src="{{ Auth::check() ? Auth::user()->small_avatar_url : 'https://picsum.photos/seed/user123/40/40.jpg' }}" alt="User" style="border-radius: 50%; width: 32px; height: 32px;">
                         </button>
                     </div>
                 </header>

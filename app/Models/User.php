@@ -138,4 +138,130 @@ class User extends Authenticatable
     {
         return strtoupper(substr($this->fName, 0, 1));
     }
+
+    /**
+ * Get the users that this user follows
+ */
+public function followings()
+{
+    return $this->belongsToMany(User::class, 'followers', 'follower_id', 'following_id')
+                ->withTimestamps();
+}
+
+/**
+ * Get the users who follow this user
+ */
+public function followers()
+{
+    return $this->belongsToMany(User::class, 'followers', 'following_id', 'follower_id')
+                ->withTimestamps();
+}
+
+/**
+ * Check if user follows another user
+ */
+public function isFollowing(User $user): bool
+{
+    return $this->followings()->where('following_id', $user->id)->exists();
+}
+
+/**
+ * Check if user is followed by another user
+ */
+public function isFollowedBy(User $user): bool
+{
+    return $this->followers()->where('follower_id', $user->id)->exists();
+}
+
+/**
+ * Follow a user
+ */
+public function follow(User $user): void
+{
+    if (!$this->isFollowing($user) && $this->id !== $user->id) {
+        $this->followings()->attach($user->id);
+    }
+}
+
+/**
+ * Unfollow a user
+ */
+public function unfollow(User $user): void
+{
+    $this->followings()->detach($user->id);
+}
+
+/**
+ * Toggle follow status
+ */
+public function toggleFollow(User $user): bool
+{
+    if ($this->isFollowing($user)) {
+        $this->unfollow($user);
+        return false;
+    } else {
+        $this->follow($user);
+        return true;
+    }
+}
+
+/**
+ * Get followers count
+ */
+public function getFollowersCountAttribute(): int
+{
+    return $this->followers()->count();
+}
+
+/**
+ * Get following count
+ */
+public function getFollowingCountAttribute(): int
+{
+    return $this->followings()->count();
+}
+
+/**
+ * Get the user's avatar URL
+ */
+public function getAvatarUrlAttribute(): string
+{
+    if ($this->avatar) {
+        return asset('storage/' . $this->avatar);
+    }
+    
+    if ($this->profile_pic) {
+        return asset('storage/' . $this->profile_pic);
+    }
+    
+    // Generate gravatar or default avatar
+    $hash = md5(strtolower(trim($this->email)));
+    return "https://www.gravatar.com/avatar/{$hash}?d=identicon&s=200";
+}
+
+/**
+ * Get the user's small avatar URL
+ */
+public function getSmallAvatarUrlAttribute(): string
+{
+    if ($this->avatar) {
+        return asset('storage/' . $this->avatar);
+    }
+    
+    $hash = md5(strtolower(trim($this->email)));
+    return "https://www.gravatar.com/avatar/{$hash}?d=identicon&s=60";
+}
+
+/**
+ * Get the user's medium avatar URL
+ */
+public function getMediumAvatarUrlAttribute(): string
+{
+    if ($this->avatar) {
+        return asset('storage/' . $this->avatar);
+    }
+    
+    $hash = md5(strtolower(trim($this->email)));
+    return "https://www.gravatar.com/avatar/{$hash}?d=identicon&s=120";
+}
 }

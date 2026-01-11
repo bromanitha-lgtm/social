@@ -23,7 +23,7 @@
                 <h1 class="hero-title">Past Paper Discussion Board</h1>
                 <p class="hero-subtitle" id="hero-subtitle">සියලුම විෂයයන් සඳහා ප්‍රශ්න පත්‍ර, විසඳුම් සහ සාකච්ඡා</p>
                 <div class="hero-buttons">
-                    <a href="{{ route('search') }}" class="btn btn-primary btn-animate">
+                    {{-- <a href="{{ route('search') }}" class="btn btn-primary btn-animate"> --}}
                         <i class="fas fa-book-open"></i> ප්‍රශ්න පත්‍ර බලන්න
                     </a>
                     <a href="#features" class="btn btn-secondary btn-animate">
