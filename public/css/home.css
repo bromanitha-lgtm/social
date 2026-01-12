@@ -210,7 +210,6 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 
 .search-input {
     width: 100%;
-    /* margin-top: 10px; */
     padding: 10px 15px 10px 40px;
     border: none;
     border-bottom: 1px solid transparent;
@@ -232,7 +231,6 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     position: absolute;
     left: 15px;
     top: 50%;
-    /* margin-top: 6px; */
     transform: translateY(-50%);
     color: var(--text-muted);
     z-index: 1;
@@ -261,6 +259,17 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     color: #fff; 
 }
 
+.notification-dot {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    border: 2px solid var(--card-bg);
+}
+
 /* =========================================
    6. MAIN CONTENT AREA
    ========================================= */
@@ -283,8 +292,14 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     width: 100%;
 }
 
-.page-section { display: none; animation: fadeIn 0.4s ease forwards; }
-.page-section.active-section { display: block; }
+.page-section { 
+    display: none; 
+    animation: fadeIn 0.4s ease forwards; 
+}
+
+.page-section.active-section { 
+    display: block; 
+}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -438,6 +453,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
 .toast { background: var(--card-bg); color: var(--text-main); padding: 16px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow); border-left: 4px solid var(--primary-color); display: flex; align-items: center; gap: 12px; transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 250px; }
 .toast.show { transform: translateX(0); }
+.toast.success { border-left-color: #28a745; }
+.toast.error { border-left-color: #dc3545; }
+.toast.normal { border-left-color: var(--primary-color); }
 
 /* Animations */
 @keyframes morph {
@@ -462,15 +480,15 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     .sidebar.active { transform: translateX(0); }
     
     .top-bar {
-left: 10px;
-width: calc(100% - 20px); /* Full width minus side margins */
-right: 10px;
+        left: 10px;
+        width: calc(100% - 20px); /* Full width minus side margins */
+        right: 10px;
     }
 
     .main-content {
-margin-left: 0;
-width: 100%;
-padding: 90px 15px 20px 15px;
+        margin-left: 0;
+        width: 100%;
+        padding: 90px 15px 20px 15px;
     }
 
     .menu-toggle { display: block; }
@@ -478,44 +496,9 @@ padding: 90px 15px 20px 15px;
     .search-wrapper { width: 100%; max-width: 200px; }
 }
 
-/* ======================================================================================================= */
-
-
-/* Posts Grid */
-.posts-grid {
-    display: grid;
-    grid-template-columns: repeat(1fr);
-    gap: 24px;
-    padding: 0 20px;
-    margin-bottom: 40px;
-    min-height: 300px;
-}
-
-/* Post Card */
-.post-card {
-    background: var(--card-bg);
-    max-width: 350px;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s, box-shadow 0.3s;
-    border: 1px solid var(--border-color);
-    opacity: 0;
-    transform: translateY(20px);
-    animation: fadeInUp 0.5s ease forwards;
-}
-
 /* =========================================
    9. LIVE SEARCH STYLES
    ========================================= */
-
-.search-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 350px;
-    align-self: stretch;
-}
 
 .search-results-dropdown {
     position: absolute;
@@ -706,8 +689,15 @@ padding: 90px 15px 20px 15px;
 .search-loading .spinner {
     width: 24px;
     height: 24px;
-    border-width: 2px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
     margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* Responsive search */
@@ -726,226 +716,108 @@ padding: 90px 15px 20px 15px;
 }
 
 /* =========================================
-   9. LIVE SEARCH STYLES
+   10. PROFILE VIEW STYLES
    ========================================= */
 
-.search-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 350px;
-    align-self: stretch;
+.profile-view-container {
+    padding: 20px;
 }
 
-.search-results-dropdown {
-    position: absolute;
-    top: 100%;
+.profile-post-like-btn {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.profile-post-like-btn:hover {
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.profile-post-like-btn.liked {
+    color: #dc3545;
+}
+
+.posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+}
+
+/* =========================================
+   11. SHARE MODAL STYLES
+   ========================================= */
+
+.share-modal {
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
-    margin-top: 10px;
-    background: var(--card-bg);
-    border-radius: var(--radius-md);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--border-color);
-    z-index: 1000;
-    overflow: hidden;
-    animation: slideDown 0.2s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.search-results-container {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.search-results-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(67, 97, 238, 0.05);
-}
-
-.search-results-header span {
-    font-weight: 600;
-    color: var(--text-main);
-}
-
-.search-results-header small {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.search-results-body {
-    padding: 8px 0;
-}
-
-.search-result-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 16px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-bottom: 1px solid transparent;
-}
-
-.search-result-item:hover {
-    background: rgba(67, 97, 238, 0.08);
-}
-
-.search-result-item:last-child {
-    border-bottom: none;
-}
-
-.search-result-item.user {
-    border-left: 3px solid var(--primary-color);
-}
-
-.search-result-item.post {
-    border-left: 3px solid var(--success-color);
-}
-
-.search-result-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    margin-right: 12px;
-    flex-shrink: 0;
-    object-fit: cover;
-}
-
-.search-result-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.search-result-title {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--text-main);
-    margin-bottom: 2px;
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.search-result-subtitle {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.search-result-meta {
-    display: flex;
-    gap: 10px;
-    margin-top: 4px;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.search-result-meta span {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-
-.search-result-type {
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 500;
-    margin-left: 8px;
-    flex-shrink: 0;
-}
-
-.search-result-type.user {
-    background: rgba(67, 97, 238, 0.1);
-    color: var(--primary-color);
-}
-
-.search-result-type.post {
-    background: rgba(76, 201, 240, 0.1);
-    color: var(--success-color);
-}
-
-.search-results-footer {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border-color);
-    text-align: center;
-    background: var(--bg-color);
-}
-
-.search-results-footer a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
 }
 
-.search-results-footer a:hover {
-    text-decoration: underline;
+.share-modal.show {
+    opacity: 1;
+    visibility: visible;
 }
 
-.no-results {
-    padding: 30px 20px;
-    text-align: center;
-    color: var(--text-muted);
+.share-modal-content {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
 }
 
-.no-results i {
-    font-size: 2rem;
-    margin-bottom: 10px;
-    opacity: 0.5;
+.share-options {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
-.search-loading {
-    padding: 20px;
-    text-align: center;
+.share-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background 0.3s;
+    width: 80px;
 }
 
-.search-loading .spinner {
-    width: 24px;
-    height: 24px;
-    border: 2px solid var(--border-color);
-    border-top-color: var(--primary-color);
+.share-option:hover {
+    background: rgba(67, 97, 238, 0.1);
+}
+
+.share-icon {
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-@media (max-width: 768px) {
-    .search-wrapper {
-        width: 200px;
-    }
-    
-    .search-results-dropdown {
-        position: fixed;
-        top: 70px;
-        left: 20px;
-        right: 20px;
-        max-height: 60vh;
-    }
-}
+.facebook-bg { background: #3b5998; }
+.twitter-bg { background: #1da1f2; }
+.whatsapp-bg { background: #25d366; }
+.copy-bg { background: var(--primary-color); }

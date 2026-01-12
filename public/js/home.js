@@ -61,9 +61,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize live search
     initializeLiveSearch();
-    
-    // FIX: Initialize search result click handlers
-    initializeSearchResultClicks();
 });
 
 // 3. COUNTERS
@@ -93,7 +90,7 @@ function animateCounters() {
     });
 }
 
-// 4. TOAST
+// 4. TOAST (Updated for consistency)
 function showToast(message, type = 'normal') {
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -210,7 +207,7 @@ function renderActivity() {
     `).join('');
 }
 
-// 7. LIVE SEARCH FUNCTIONALITY
+// 7. LIVE SEARCH FUNCTIONALITY (Updated)
 function initializeLiveSearch() {
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
@@ -381,8 +378,42 @@ function initializeLiveSearch() {
             viewAllResults.style.display = 'none';
         }
         
-        // FIX: Re-initialize click handlers for new search results
-        initializeSearchResultClicks();
+        // Initialize click handlers for search results
+        document.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const url = this.getAttribute('data-url');
+                const type = this.classList.contains('user') ? 'user' : 'post';
+                
+                // Hide search results
+                searchResults.style.display = 'none';
+                searchInput.value = '';
+                
+                if (type === 'user') {
+                    // Extract user ID from URL
+                    const userId = url.split('/profile/')[1];
+                    
+                    // Store profile user ID in localStorage
+                    localStorage.setItem('profileUserId', userId);
+                    localStorage.setItem('activeTab', 'profile');
+                    
+                    // Switch to profile tab
+                    if (window.switchToTab) {
+                        window.switchToTab('profile');
+                    }
+                    
+                    // Load the profile
+                    if (window.loadUserProfile) {
+                        window.loadUserProfile(userId);
+                    }
+                } else if (type === 'post') {
+                    // For posts, redirect directly
+                    window.location.href = url;
+                }
+            });
+        });
     }
     
     function showSearchError(message) {
@@ -414,192 +445,13 @@ function initializeLiveSearch() {
     });
 }
 
-// 8. SEARCH RESULT CLICK HANDLERS - NEW FUNCTION
-function initializeSearchResultClicks() {
-    console.log('Initializing search result click handlers...');
-    
-    // Remove any existing click handlers
-    document.querySelectorAll('.search-result-item').forEach(item => {
-        item.removeEventListener('click', handleSearchResultClick);
-    });
-    
-    // Add new click handlers
-    document.querySelectorAll('.search-result-item').forEach(item => {
-        item.addEventListener('click', handleSearchResultClick);
-        
-        // Add visual feedback
-        item.style.cursor = 'pointer';
-        item.classList.add('clickable-search-result');
-    });
-    
-    console.log(`Initialized ${document.querySelectorAll('.search-result-item').length} search result items`);
-}
-
-function handleSearchResultClick(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const url = this.getAttribute('data-url');
-    console.log('Search result clicked, URL:', url);
-    
-    if (!url) {
-        console.error('No URL found for search result');
-        return;
-    }
-    
-    // Hide search results
-    const searchResults = document.getElementById('searchResults');
-    if (searchResults) {
-        searchResults.style.display = 'none';
-    }
-    
-    // Clear search input
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.value = '';
-    }
-    
-    // Handle different URL types
-    if (url.includes('/profile/')) {
-        // For profile URLs, redirect immediately
-        console.log('Redirecting to profile:', url);
-        window.location.href = url;
-    } else if (url.includes('/posts/')) {
-        // For post URLs, redirect immediately
-        console.log('Redirecting to post:', url);
-        window.location.href = url;
-    } else {
-        // Fallback
-        console.log('Navigating to:', url);
-        window.location.href = url;
-    }
-}
-
-// 9. PROFILE SYSTEM - NEW
-function initializeProfileSystem() {
-    console.log('Initializing profile system...');
-    
-    // User menu button click
-    const userMenuBtn = document.getElementById('userMenuBtn');
-    if (userMenuBtn) {
-        userMenuBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('User menu clicked');
-            
-            // Simple redirect to own profile
-            const currentUserId = '{{ Auth::id() }}';
-            if (currentUserId) {
-                window.location.href = '/profile/' + currentUserId;
-            } else {
-                window.location.href = '/login';
-            }
-        });
-    }
-    
-    // Initialize follow buttons on page load
-    initializeFollowButtons();
-}
-
-// 10. FOLLOW BUTTONS
-function initializeFollowButtons() {
-    console.log('Initializing follow buttons...');
-    
-    document.querySelectorAll('.follow-btn').forEach(button => {
-        // Remove existing listeners
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
-        
-        // Add click event
-        newButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const userId = this.getAttribute('data-user-id');
-            if (!userId) {
-                console.error('No user ID found on follow button');
-                return;
-            }
-            
-            console.log('Follow button clicked for user:', userId);
-            
-            // Show loading state
-            const originalText = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            this.disabled = true;
-            
-            // Get CSRF token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-            
-            fetch(`/users/${userId}/toggle-follow`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken || '',
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                console.log('Follow response status:', response.status);
-                if (response.status === 401) {
-                    window.location.href = '/login';
-                    return null;
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (!data) return;
-                
-                console.log('Follow response data:', data);
-                
-                if (data.success) {
-                    // Update button state
-                    if (data.action === 'followed') {
-                        this.innerHTML = '<i class="fas fa-user-check"></i> Following';
-                        this.classList.add('following');
-                        this.classList.remove('btn-primary');
-                        this.classList.add('btn-outline');
-                    } else {
-                        this.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
-                        this.classList.remove('following');
-                        this.classList.add('btn-primary');
-                        this.classList.remove('btn-outline');
-                    }
-                    
-                    // Update followers count
-                    const followersCountEl = document.getElementById('followersCount');
-                    if (followersCountEl && data.followers_count !== undefined) {
-                        followersCountEl.textContent = data.followers_count;
-                    }
-                    
-                    showToast(data.message || 'Success', 'success');
-                } else {
-                    this.innerHTML = originalText;
-                    showToast(data.message || 'Action failed', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Follow error:', error);
-                this.innerHTML = originalText;
-                showToast('Network error. Please try again.', 'error');
-            })
-            .finally(() => {
-                this.disabled = false;
-            });
-        });
-    });
-}
-
-// 11. INITIALIZE EVERYTHING
+// 8. INITIALIZE EVERYTHING
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Home page initialized');
     
     animateCounters();
     renderActivity();
     drawChart('smartChart', [20, 45, 30, 60, 55, 80, 70, 90, 85, 100]);
-    
-    // Initialize profile system
-    initializeProfileSystem();
     
     let resizeTimer;
     window.addEventListener('resize', () => {
@@ -614,17 +466,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 200);
     });
 });
-
-// 12. GLOBAL FUNCTIONS (for testing)
-window.debugSearch = function() {
-    console.log('=== DEBUG SEARCH ===');
-    console.log('Search items:', document.querySelectorAll('.search-result-item').length);
-    document.querySelectorAll('.search-result-item').forEach((item, i) => {
-        console.log(`Item ${i}:`, item, 'URL:', item.getAttribute('data-url'));
-    });
-};
-
-window.testProfileClick = function(userId) {
-    console.log('Testing profile click for user:', userId);
-    window.location.href = `/profile/${userId}`;
-};

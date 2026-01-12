@@ -1,49 +1,112 @@
 <?php
 
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\AvatarController;
+use App\Http\Controllers\LikeController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\FollowerController;
-use App\Http\Controllers\AvatarController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProfileViewController;
+use Illuminate\Support\Facades\Route;
 use App\Models\User;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
 */
 
-// Public routes
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/welcome', function () {
-    return view('welcome');
-})->name('welcome');
+// Welcome/Home Routes
+Route::get('/', [HomeController::class, 'index'])->name('welcome');
+Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-Route::get('/test', function () {
-    return view('test.test');
-})->name('test');
+// Authentication Routes
+Auth::routes();
 
-// Profile viewing route (public) - FIXED FOR AUTO TAB SWITCH
-Route::get('/profile/{user}', function (User $user) {
-    // Store multiple session flags for different scenarios
-    session([
-        'view_profile' => true,
-        'profile_user_id' => $user->id,
-        'direct_profile_access' => true, // Flag for direct profile access
-        'should_switch_to_profile_tab' => true // New flag to force tab switch
-    ]);
+// Profile Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/change-password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
     
-    return redirect()->route('home');
+    // Avatar Routes
+    Route::post('/avatar/upload', [AvatarController::class, 'upload'])->name('avatar.upload');
+    Route::post('/avatar/remove', [AvatarController::class, 'remove'])->name('avatar.remove');
+    
+    // My Profile Data (AJAX)
+    Route::get('/my-profile-data', [ProfileController::class, 'getMyProfileData'])->name('profile.my-data');
+});
+
+// User Profile Routes (Public)
+Route::get('/profile/{user}', function(User $user) {
+    // Store in session for direct access
+    session(['direct_profile_access' => true, 'profile_user_id' => $user->id]);
+    
+    // Redirect to home page with profile tab active
+    return redirect()->route('home')->with([
+        'profile_user_id' => $user->id,
+        'direct_profile_access' => true
+    ]);
 })->name('profile.show');
 
-// Profile AJAX routes
+// User Profile Data (AJAX)
 Route::get('/users/{user}/profile-data', [ProfileController::class, 'getProfileData'])->name('profile.data');
-Route::get('/my-profile-data', [ProfileController::class, 'getMyProfileData'])->name('my.profile.data');
 
-// Search routes (public)
+// Post Routes
+Route::prefix('posts')->group(function () {
+    // Public routes
+    Route::get('/', [PostController::class, 'index'])->name('posts.index');
+    Route::get('/{post}', [PostController::class, 'show'])->name('posts.show');
+    Route::get('/search', [PostController::class, 'search'])->name('posts.search');
+    Route::get('/popular', [PostController::class, 'popular'])->name('posts.popular');
+    Route::get('/trending', [PostController::class, 'getTrendingPosts'])->name('posts.trending');
+    
+    // API Routes for AJAX
+    Route::get('/api/posts', [PostController::class, 'apiIndex'])->name('posts.api.index');
+    Route::get('/api/filtered', [PostController::class, 'getFilteredPosts'])->name('posts.api.filtered');
+    
+    // Auth required routes
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/create', [PostController::class, 'create'])->name('posts.create');
+        Route::post('/', [PostController::class, 'store'])->name('posts.store');
+        Route::get('/{post}/edit', [PostController::class, 'edit'])->name('posts.edit');
+        Route::put('/{post}', [PostController::class, 'update'])->name('posts.update');
+        Route::delete('/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+        Route::get('/my/drafts', [PostController::class, 'drafts'])->name('posts.drafts');
+        Route::get('/user/{user?}', [PostController::class, 'userPosts'])->name('posts.user');
+        
+        // Like routes
+        Route::post('/{post}/like', [PostController::class, 'like'])->name('posts.like');
+        Route::post('/{post}/unlike', [PostController::class, 'unlike'])->name('posts.unlike');
+        
+        // Comment routes
+        Route::post('/{post}/comment', [PostController::class, 'comment'])->name('posts.comment');
+    });
+});
+
+// Like Routes
+Route::prefix('likes')->middleware(['auth'])->group(function () {
+    Route::post('/{post}', [LikeController::class, 'like'])->name('likes.toggle');
+    Route::get('/{post}/likers', [LikeController::class, 'getLikers'])->name('likes.likers');
+});
+
+// Comment Routes
+Route::prefix('comments')->middleware(['auth'])->group(function () {
+    Route::post('/', [CommentController::class, 'store'])->name('comments.store');
+    Route::put('/{comment}', [CommentController::class, 'update'])->name('comments.update');
+    Route::delete('/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    Route::get('/{post}/comments', [CommentController::class, 'getComments'])->name('comments.get');
+    Route::get('/{comment}/replies', [CommentController::class, 'getReplies'])->name('comments.replies');
+});
+
+// Search Routes
 Route::prefix('search')->group(function () {
     Route::get('/live', [SearchController::class, 'liveSearch'])->name('search.live');
     Route::get('/', [SearchController::class, 'index'])->name('search.index');
@@ -52,93 +115,83 @@ Route::prefix('search')->group(function () {
     Route::get('/advanced', [SearchController::class, 'advanced'])->name('search.advanced');
 });
 
-// Public Post Routes
-Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
-Route::get('/posts/search', [PostController::class, 'search'])->name('posts.search');
-Route::get('/posts/popular', [PostController::class, 'popular'])->name('posts.popular');
-Route::get('/posts/trending', [PostController::class, 'getTrendingPosts'])->name('posts.trending');
-Route::get('/user/{user}/posts', [PostController::class, 'userPosts'])->name('posts.user.show');
-
-// API endpoints for home page (public)
-Route::get('/api/posts', [PostController::class, 'apiIndex']);
-Route::get('/api/posts/filtered', [PostController::class, 'getFilteredPosts'])->name('posts.filtered');
-Route::get('/api/posts/trending', [PostController::class, 'getTrendingPosts'])->name('posts.trending');
-
-// Authentication routes
-Auth::routes();
-
-// Protected routes (require authentication)
-Route::middleware(['auth'])->group(function () {
-    // Post CRUD operations
-    Route::resource('posts', PostController::class)->except(['show']);
-    
-    // Post interactions
-    Route::post('/posts/{post}/like', [PostController::class, 'like'])->name('posts.like');
-    Route::post('/posts/{post}/unlike', [PostController::class, 'unlike'])->name('posts.unlike');
-    Route::post('/posts/{post}/comment', [PostController::class, 'comment'])->name('posts.comment');
-    
-    // User specific post routes
-    Route::get('/my-posts', [PostController::class, 'userPosts'])->name('posts.user');
-    Route::get('/my-drafts', [PostController::class, 'drafts'])->name('posts.drafts');
-    
-    // Follower routes
-    Route::prefix('users')->group(function () {
-        Route::post('/{user}/follow', [FollowerController::class, 'follow'])->name('users.follow');
-        Route::post('/{user}/unfollow', [FollowerController::class, 'unfollow'])->name('users.unfollow');
-        Route::post('/{user}/toggle-follow', [FollowerController::class, 'toggleFollow'])->name('users.toggle-follow');
-        Route::get('/{user}/followers', [FollowerController::class, 'followers'])->name('users.followers');
-        Route::get('/{user}/following', [FollowerController::class, 'following'])->name('users.following');
-        Route::get('/{user}/check-follow', [FollowerController::class, 'check'])->name('users.check-follow');
-    });
-    
-    // Avatar routes
-    Route::post('/avatar/upload', [AvatarController::class, 'upload'])->name('avatar.upload');
-    Route::post('/avatar/remove', [AvatarController::class, 'remove'])->name('avatar.remove');
-    
-    // Profile update
-    Route::post('/profile/update', function (\Illuminate\Http\Request $request) {
-        $user = Auth::user();
-        $user->update($request->validate([
-            'fName' => 'required|string|max:255',
-            'lName' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'mobNumber' => 'required|string|max:20'
-        ]));
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Profile updated successfully'
-        ]);
-    })->name('profile.update');
-    
-    // Password change route (add this if missing)
-    Route::post('/profile/change-password', function (\Illuminate\Http\Request $request) {
-        $request->validate([
-            'current_password' => 'required',
-            'new_password' => 'required|min:6|confirmed',
-        ]);
-        
-        $user = Auth::user();
-        
-        if (!\Hash::check($request->current_password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Current password is incorrect'
-            ], 422);
-        }
-        
-        $user->update([
-            'password' => \Hash::make($request->new_password)
-        ]);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Password changed successfully'
-        ]);
-    })->name('profile.change-password');
+// Follower Routes
+Route::middleware(['auth'])->prefix('users')->group(function () {
+    Route::post('/{user}/follow', [FollowerController::class, 'follow'])->name('follow');
+    Route::post('/{user}/unfollow', [FollowerController::class, 'unfollow'])->name('unfollow');
+    Route::post('/{user}/toggle-follow', [FollowerController::class, 'toggleFollow'])->name('follow.toggle');
+    Route::get('/{user}/followers', [FollowerController::class, 'followers'])->name('followers');
+    Route::get('/{user}/following', [FollowerController::class, 'following'])->name('following');
+    Route::get('/{user}/check-follow', [FollowerController::class, 'check'])->name('follow.check');
 });
 
-// Fallback route (keep at the end)
+// Share Routes (Social Media)
+Route::get('/share/profile/{user}', function(User $user) {
+    return view('share.profile', compact('user'));
+})->name('share.profile');
+
+Route::get('/share/post/{post}', function(\App\Models\Post $post) {
+    return view('share.post', compact('post'));
+})->name('share.post');
+
+// Dashboard Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+    
+    Route::get('/wallet', function () {
+        return view('wallet');
+    })->name('wallet');
+    
+    Route::get('/settings', function () {
+        return view('settings');
+    })->name('settings');
+    
+    Route::get('/notifications', function () {
+        return view('notifications');
+    })->name('notifications');
+});
+
+// API Routes for AJAX calls
+Route::prefix('api')->group(function () {
+    // Posts API
+    Route::get('/posts', [PostController::class, 'apiIndex'])->name('api.posts.index');
+    Route::get('/posts/filtered', [PostController::class, 'getFilteredPosts'])->name('api.posts.filtered');
+    
+    // Search API
+    Route::get('/search/live', [SearchController::class, 'liveSearch'])->name('api.search.live');
+    
+    // Profile API
+    Route::get('/profile/{user}/data', [ProfileController::class, 'getProfileData'])->name('api.profile.data');
+    Route::get('/my-profile/data', [ProfileController::class, 'getMyProfileData'])->name('api.profile.my-data');
+    
+    // Follow API
+    Route::post('/follow/{user}/toggle', [FollowerController::class, 'toggleFollow'])->name('api.follow.toggle');
+    
+    // Like API
+    Route::post('/posts/{post}/like', [PostController::class, 'like'])->name('api.posts.like');
+    Route::post('/posts/{post}/unlike', [PostController::class, 'unlike'])->name('api.posts.unlike');
+});
+
+// Static Pages
+Route::get('/about', function () {
+    return view('pages.about');
+})->name('about');
+
+Route::get('/contact', function () {
+    return view('pages.contact');
+})->name('contact');
+
+Route::get('/privacy', function () {
+    return view('pages.privacy');
+})->name('privacy');
+
+Route::get('/terms', function () {
+    return view('pages.terms');
+})->name('terms');
+
+// Error Pages
 Route::fallback(function () {
-    return redirect()->route('home');
+    return view('errors.404');
 });

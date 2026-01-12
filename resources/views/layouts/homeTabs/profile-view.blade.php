@@ -1,7 +1,7 @@
 <div class="profile-view-container">
     <!-- Back Button -->
     <div class="mb-4">
-        <button class="btn btn-outline" onclick="loadMyProfile()">
+        <button class="btn btn-outline" onclick="loadMyProfile()" data-action="back-to-profile">
             <i class="fas fa-arrow-left"></i> Back to My Profile
         </button>
     </div>
@@ -36,6 +36,18 @@
                             <i class="fas {{ Auth::user()->isFollowing($profileUser) ? 'fa-user-check' : 'fa-user-plus' }}"></i>
                             {{ Auth::user()->isFollowing($profileUser) ? 'Following' : 'Follow' }}
                         </button>
+                        
+                        <!-- Share Button -->
+                        <button class="btn btn-outline share-profile-btn" 
+                                data-user-id="{{ $profileUser->id }}"
+                                data-user-name="{{ $profileUser->fName }} {{ $profileUser->lName }}">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
+                        
+                        <!-- Message Button -->
+                        <button class="btn btn-outline" onclick="showToast('Message feature coming soon!', 'normal')">
+                            <i class="fas fa-envelope"></i> Message
+                        </button>
                     @else
                         <button class="btn btn-outline" onclick="editProfile()">
                             <i class="fas fa-edit"></i> Edit Profile
@@ -46,10 +58,6 @@
                         <i class="fas fa-user-plus"></i> Follow
                     </a>
                 @endauth
-                
-                <button class="btn btn-outline">
-                    <i class="fas fa-envelope"></i> Message
-                </button>
             </div>
         </div>
     </div>
@@ -64,19 +72,28 @@
             
             @if($userPosts->count() > 0)
                 @foreach($userPosts as $post)
-                    <div class="post-card">
+                    <div class="post-card" data-post-id="{{ $post->id }}">
                         @if($post->image)
-                            <img src="{{ asset('storage/' . $post->image) }}" alt="{{ $post->title }}" class="post-image">
+                            <img src="{{ asset('storage/' . $post->image) }}" alt="{{ $post->title }}" class="post-image" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px 8px 0 0;">
                         @endif
-                        <div class="post-content">
+                        <div class="post-content" style="padding: 15px;">
                             <h4>{{ Str::limit($post->title, 50) }}</h4>
-                            <p class="post-excerpt">{{ Str::limit(strip_tags($post->content), 100) }}</p>
-                            <div class="post-meta">
-                                <span><i class="fas fa-heart"></i> {{ $post->likes_count }}</span>
+                            <p class="post-excerpt" style="color: var(--text-muted); margin: 10px 0;">
+                                {{ Str::limit(strip_tags($post->content), 100) }}
+                            </p>
+                            <div class="post-meta" style="display: flex; gap: 15px; font-size: 0.9rem; color: var(--text-muted);">
+                                <span>
+                                    <button class="profile-post-like-btn {{ $post->isLikedBy(Auth::user()) ? 'liked' : '' }}" 
+                                            data-post-id="{{ $post->id }}"
+                                            style="background: none; border: none; color: inherit; cursor: pointer;">
+                                        <i class="{{ $post->isLikedBy(Auth::user()) ? 'fas' : 'far' }} fa-heart"></i>
+                                        <span class="like-count">{{ $post->likes_count }}</span>
+                                    </button>
+                                </span>
                                 <span><i class="fas fa-comment"></i> {{ $post->comments_count }}</span>
                                 <span><i class="fas fa-eye"></i> {{ $post->views }}</span>
                             </div>
-                            <a href="{{ route('posts.show', $post) }}" class="btn btn-primary mt-3">Read More</a>
+                            <a href="{{ route('posts.show', $post) }}" class="btn btn-primary mt-3" style="display: block; text-align: center;">Read More</a>
                         </div>
                     </div>
                 @endforeach
@@ -108,18 +125,50 @@
         text-align: center;
         padding: 40px;
         color: var(--text-muted);
+        grid-column: 1 / -1;
+    }
+    
+    .profile-post-like-btn.liked {
+        color: #dc3545;
+    }
+    
+    .profile-post-like-btn:hover {
+        color: #dc3545;
+    }
+    
+    .post-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+    
+    .post-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .action-buttons .btn {
+            width: 100%;
+        }
     }
 </style>
 
 <script>
-    function loadMyProfile() {
-        fetch('/my-profile-data')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('profileContent').innerHTML = data.html;
-                }
-            })
-            .catch(error => console.error('Error:', error));
+    function editProfile() {
+        showToast('Edit profile feature coming soon!', 'normal');
     }
 </script>
