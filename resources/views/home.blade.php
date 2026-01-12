@@ -149,108 +149,184 @@
     
     <script src="{{ asset('js/home.js') }}"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle search result clicks
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('.search-result-item')) {
-                    const resultItem = e.target.closest('.search-result-item');
-                    const url = resultItem.getAttribute('data-url');
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('=== HOME PAGE INITIALIZED ===');
+        
+        // Debug: Log all elements
+        console.log('Search elements check:');
+        console.log('- Search input:', document.getElementById('searchInput'));
+        console.log('- Search results:', document.getElementById('searchResults'));
+        console.log('- Profile section:', document.getElementById('profile'));
+        console.log('- Profile content:', document.getElementById('profileContent'));
+        
+        // CRITICAL FIX: Event delegation for dynamically loaded search results
+        // We need to attach the event to document because search results are loaded dynamically
+        document.addEventListener('click', function(e) {
+            console.log('=== CLICK EVENT FIRED ===');
+            console.log('Clicked element:', e.target);
+            console.log('Clicked element class:', e.target.className);
+            
+            // Method 1: Check if clicked element or its parent is a search result
+            let searchResultItem = e.target;
+            
+            // Traverse up to find .search-result-item
+            while (searchResultItem && !searchResultItem.classList?.contains('search-result-item')) {
+                searchResultItem = searchResultItem.parentElement;
+                if (!searchResultItem) break;
+            }
+            
+            if (searchResultItem && searchResultItem.classList.contains('search-result-item')) {
+                console.log('FOUND SEARCH RESULT ITEM:', searchResultItem);
+                const url = searchResultItem.getAttribute('data-url');
+                console.log('URL from data attribute:', url);
+                
+                if (url && url.includes('/profile/')) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     
+                    // Extract user ID from URL
+                    const userId = url.split('/profile/')[1];
+                    console.log('Extracted User ID:', userId);
+                    
+                    // HIDE search results
+                    const searchResults = document.getElementById('searchResults');
+                    if (searchResults) {
+                        searchResults.style.display = 'none';
+                    }
+                    
+                    // Clear search input
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    
+                    // SIMPLE SOLUTION: Redirect to profile URL
+                    // This will trigger the route which redirects to home with session data
+                    console.log('Redirecting to:', url);
+                    window.location.href = url;
+                    
+                    return;
+                }
+            }
+            
+            // Method 2: Check for specific elements that might be inside search results
+            if (e.target.classList.contains('search-result-title') || 
+                e.target.classList.contains('search-result-avatar') ||
+                e.target.classList.contains('search-result-content') ||
+                e.target.closest('.search-result-title') ||
+                e.target.closest('.search-result-avatar') ||
+                e.target.closest('.search-result-content')) {
+                
+                console.log('Clicked inside search result');
+                const resultItem = e.target.closest('.search-result-item');
+                if (resultItem) {
+                    const url = resultItem.getAttribute('data-url');
                     if (url && url.includes('/profile/')) {
                         e.preventDefault();
-                        
-                        // Extract user ID from URL
-                        const userId = url.split('/profile/')[1];
-                        
-                        // Load profile in the profile section
-                        loadUserProfile(userId);
-                        
-                        // Switch to profile tab
-                        switchToProfileTab();
-                        
-                        // Hide search results
-                        document.getElementById('searchResults').style.display = 'none';
-                        document.getElementById('searchInput').value = '';
+                        e.stopPropagation();
+                        console.log('Navigating to profile URL:', url);
+                        window.location.href = url;
                     }
                 }
-            });
-            
-            // User menu button click
-            document.getElementById('userMenuBtn').addEventListener('click', function() {
-                switchToProfileTab();
-            });
-            
-            function loadUserProfile(userId) {
-                fetch(`/users/${userId}/profile-data`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById('profileContent').innerHTML = data.html;
-                            initializeFollowButtons();
-                        }
-                    })
-                    .catch(error => console.error('Error loading profile:', error));
             }
-            
-            function switchToProfileTab() {
-                // Remove active class from all nav items
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    item.classList.remove('active');
-                });
-                
-                // Remove active-section from all sections
-                document.querySelectorAll('.page-section').forEach(section => {
-                    section.classList.remove('active-section');
-                });
-                
-                // Add active class to profile nav item
-                document.getElementById('profileBtn').classList.add('active');
-                
-                // Show profile section
-                document.getElementById('profile').classList.add('active-section');
-            }
-            
-            function initializeFollowButtons() {
-                // Initialize follow button functionality
-                document.querySelectorAll('.follow-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const userId = this.getAttribute('data-user-id');
-                        const isFollowing = this.classList.contains('following');
-                        
-                        fetch(`/users/${userId}/toggle-follow`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Content-Type': 'application/json',
-                            }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                if (data.action === 'followed') {
-                                    this.classList.add('following');
-                                    this.innerHTML = '<i class="fas fa-user-check"></i> Following';
-                                } else {
-                                    this.classList.remove('following');
-                                    this.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
-                                }
-                                
-                                // Update followers count if element exists
-                                const followersCountEl = document.getElementById('followersCount');
-                                if (followersCountEl) {
-                                    followersCountEl.textContent = data.followers_count;
-                                }
-                            }
-                        })
-                        .catch(error => console.error('Error:', error));
-                    });
-                });
-            }
-            
-            // Initialize follow buttons on page load
-            initializeFollowButtons();
         });
-    </script>
+        
+        // User menu button click - SIMPLE REDIRECT
+        const userMenuBtn = document.getElementById('userMenuBtn');
+        if (userMenuBtn) {
+            userMenuBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('User menu button clicked');
+                @auth
+                    window.location.href = '/profile/{{ Auth::id() }}';
+                @else
+                    window.location.href = '/login';
+                @endauth
+            });
+        }
+        
+        // Initialize follow buttons on page load
+        function initializeFollowButtons() {
+            console.log('Initializing follow buttons...');
+            const followButtons = document.querySelectorAll('.follow-btn');
+            console.log('Found follow buttons:', followButtons.length);
+            
+            followButtons.forEach(button => {
+                // Remove existing listeners
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                
+                // Add click event
+                newButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const userId = this.getAttribute('data-user-id');
+                    if (!userId) return;
+                    
+                    console.log('Follow button clicked for user:', userId);
+                    
+                    // Simple form submission
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/users/${userId}/toggle-follow`;
+                    form.style.display = 'none';
+                    
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    form.appendChild(csrfToken);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                });
+            });
+        }
+        
+        // Initialize on page load
+        initializeFollowButtons();
+        
+        // DEBUG: Test function to manually load a profile
+        window.testProfileLoad = function(userId) {
+            console.log('TEST: Manually loading profile for user:', userId);
+            window.location.href = `/profile/${userId}`;
+        };
+        
+        // DEBUG: Test AJAX profile load
+        window.testAjaxProfileLoad = function(userId) {
+            console.log('TEST AJAX: Loading profile for user:', userId);
+            fetch(`/users/${userId}/profile-data`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Profile data:', data);
+                    if (data.success && data.html) {
+                        document.getElementById('profileContent').innerHTML = data.html;
+                        initializeFollowButtons();
+                        
+                        // Switch to profile tab
+                        document.querySelectorAll('.nav-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        document.getElementById('profileBtn').classList.add('active');
+                        
+                        document.querySelectorAll('.page-section').forEach(section => {
+                            section.classList.remove('active-section');
+                        });
+                        document.getElementById('profile').classList.add('active-section');
+                    }
+                })
+                .catch(error => {
+                    console.error('AJAX Error:', error);
+                });
+        };
+        
+        console.log('=== SETUP COMPLETE ===');
+    });
+</script>
     
 </body>
 </html>
