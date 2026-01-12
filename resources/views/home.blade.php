@@ -89,7 +89,7 @@
                         <button class="icon-btn" onclick="showToast('Messages inbox empty', 'normal')">
                             <i class="far fa-envelope"></i>
                         </button>
-                        <button class="icon-btn">
+                        <button class="icon-btn" id="userMenuBtn">
                             <img src="{{ Auth::check() ? Auth::user()->small_avatar_url : 'https://picsum.photos/seed/user123/40/40.jpg' }}" alt="User" style="border-radius: 50%; width: 32px; height: 32px;">
                         </button>
                     </div>
@@ -102,8 +102,25 @@
                 @include('layouts.homeTabs.dashboard')
 
                 <!-- 3. PROFILE SECTION -->
-                @include('layouts.homeTabs.profile')
-
+                <section id="profile" class="page-section">
+                    <div class="content-container">
+                        <!-- Dynamic Profile Content will be loaded here -->
+                        <div id="profileContent">
+                            @if(session('view_profile') && session('profile_user_id'))
+                                @php
+                                    $profileUser = App\Models\User::find(session('profile_user_id'));
+                                @endphp
+                                @if($profileUser)
+                                    @include('layouts.homeTabs.profile-view', ['profileUser' => $profileUser])
+                                @else
+                                    @include('layouts.homeTabs.my-profile')
+                                @endif
+                            @else
+                                @include('layouts.homeTabs.my-profile')
+                            @endif
+                        </div>
+                    </div>
+                </section>
 
                 <!-- 4. WALLET SECTION -->
                 <section id="wallet" class="page-section">
@@ -130,8 +147,110 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
     
-    <!-- <script src="theme.js"></script> -->
     <script src="{{ asset('js/home.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle search result clicks
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.search-result-item')) {
+                    const resultItem = e.target.closest('.search-result-item');
+                    const url = resultItem.getAttribute('data-url');
+                    
+                    if (url && url.includes('/profile/')) {
+                        e.preventDefault();
+                        
+                        // Extract user ID from URL
+                        const userId = url.split('/profile/')[1];
+                        
+                        // Load profile in the profile section
+                        loadUserProfile(userId);
+                        
+                        // Switch to profile tab
+                        switchToProfileTab();
+                        
+                        // Hide search results
+                        document.getElementById('searchResults').style.display = 'none';
+                        document.getElementById('searchInput').value = '';
+                    }
+                }
+            });
+            
+            // User menu button click
+            document.getElementById('userMenuBtn').addEventListener('click', function() {
+                switchToProfileTab();
+            });
+            
+            function loadUserProfile(userId) {
+                fetch(`/users/${userId}/profile-data`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('profileContent').innerHTML = data.html;
+                            initializeFollowButtons();
+                        }
+                    })
+                    .catch(error => console.error('Error loading profile:', error));
+            }
+            
+            function switchToProfileTab() {
+                // Remove active class from all nav items
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Remove active-section from all sections
+                document.querySelectorAll('.page-section').forEach(section => {
+                    section.classList.remove('active-section');
+                });
+                
+                // Add active class to profile nav item
+                document.getElementById('profileBtn').classList.add('active');
+                
+                // Show profile section
+                document.getElementById('profile').classList.add('active-section');
+            }
+            
+            function initializeFollowButtons() {
+                // Initialize follow button functionality
+                document.querySelectorAll('.follow-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const userId = this.getAttribute('data-user-id');
+                        const isFollowing = this.classList.contains('following');
+                        
+                        fetch(`/users/${userId}/toggle-follow`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Content-Type': 'application/json',
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                if (data.action === 'followed') {
+                                    this.classList.add('following');
+                                    this.innerHTML = '<i class="fas fa-user-check"></i> Following';
+                                } else {
+                                    this.classList.remove('following');
+                                    this.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                                }
+                                
+                                // Update followers count if element exists
+                                const followersCountEl = document.getElementById('followersCount');
+                                if (followersCountEl) {
+                                    followersCountEl.textContent = data.followers_count;
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                    });
+                });
+            }
+            
+            // Initialize follow buttons on page load
+            initializeFollowButtons();
+        });
+    </script>
     
 </body>
 </html>

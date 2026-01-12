@@ -170,6 +170,7 @@
             text-decoration: none;
             font-weight: 500;
             transition: all 0.3s;
+            cursor: pointer;
         }
         
         .like-btn {
@@ -236,6 +237,30 @@
         .delete-btn:hover {
             background-color: #ff5252;
             color: white;
+        }
+        
+        .follow-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        
+        .follow-btn:hover {
+            background-color: #5a67d8;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .follow-btn.following {
+            background-color: #6c757d;
+            color: white;
+            border: 1px solid #6c757d;
+        }
+        
+        .follow-btn.following:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
         }
         
         .comments-section {
@@ -551,7 +576,11 @@
                                     {{ strtoupper(substr($post->user->fName, 0, 1)) }}
                                 </div>
                                 <div>
-                                    <div class="author-name">{{ $post->user->fName }} {{ $post->user->lName }}</div>
+                                    <div class="author-name">
+                                        <a href="{{ route('profile.show', $post->user) }}" style="color: #333; text-decoration: none;">
+                                            {{ $post->user->fName }} {{ $post->user->lName }}
+                                        </a>
+                                    </div>
                                     <div class="text-muted">{{ $post->created_at->format('M d, Y') }}</div>
                                 </div>
                             </div>
@@ -672,7 +701,11 @@
                                         {{ strtoupper(substr($comment->user->fName, 0, 1)) }}
                                     </div>
                                     <div>
-                                        <div class="comment-author-name">{{ $comment->user->fName }} {{ $comment->user->lName }}</div>
+                                        <div class="comment-author-name">
+                                            <a href="{{ route('profile.show', $comment->user) }}" style="color: #333; text-decoration: none;">
+                                                {{ $comment->user->fName }} {{ $comment->user->lName }}
+                                            </a>
+                                        </div>
                                         <div class="comment-date">{{ $comment->created_at->diffForHumans() }}</div>
                                     </div>
                                 </div>
@@ -708,18 +741,31 @@
                                 <div class="author-stat-label">Posts</div>
                             </div>
                             <div class="author-stat">
-                                <div class="author-stat-number">{{ $post->user->posts()->sum('likes_count') }}</div>
-                                <div class="author-stat-label">Likes</div>
+                                <div class="author-stat-number">{{ $post->user->followers_count }}</div>
+                                <div class="author-stat-label">Followers</div>
                             </div>
                         </div>
                         
                         @auth
                             @if(Auth::id() != $post->user_id)
-                            <button class="action-btn edit-btn" style="width: 100%;">
+                                <button class="action-btn follow-btn {{ Auth::user()->isFollowing($post->user) ? 'following' : '' }}" 
+                                        id="followAuthorButton"
+                                        data-user-id="{{ $post->user->id }}"
+                                        style="width: 100%; margin-top: 15px;">
+                                    <i class="fas {{ Auth::user()->isFollowing($post->user) ? 'fa-user-check' : 'fa-user-plus' }} me-2"></i>
+                                    {{ Auth::user()->isFollowing($post->user) ? 'Following' : 'Follow' }}
+                                </button>
+                            @else
+                                <a href="{{ route('home') }}" class="action-btn edit-btn" style="width: 100%; margin-top: 15px;">
+                                    <i class="fas fa-user me-2"></i>
+                                    My Profile
+                                </a>
+                            @endif
+                        @else
+                            <a href="{{ route('login') }}" class="action-btn follow-btn" style="width: 100%; margin-top: 15px;">
                                 <i class="fas fa-user-plus me-2"></i>
                                 Follow
-                            </button>
-                            @endif
+                            </a>
                         @endauth
                     </div>
                     
@@ -828,6 +874,46 @@
                 });
             }
             
+            // Follow Author Functionality
+            const followAuthorButton = document.getElementById('followAuthorButton');
+            if (followAuthorButton) {
+                followAuthorButton.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-user-id');
+                    const isFollowing = this.classList.contains('following');
+                    
+                    fetch(`/users/${userId}/toggle-follow`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update UI
+                            if (data.action === 'followed') {
+                                this.classList.add('following');
+                                this.innerHTML = '<i class="fas fa-user-check me-2"></i> Following';
+                            } else {
+                                this.classList.remove('following');
+                                this.innerHTML = '<i class="fas fa-user-plus me-2"></i> Follow';
+                            }
+                            
+                            // Show toast notification
+                            showToast(data.message, 'success');
+                            
+                            // Update author's followers count in the sidebar
+                            const authorFollowersElement = document.querySelector('.author-stat-number:nth-child(2)');
+                            if (authorFollowersElement && data.followers_count !== undefined) {
+                                authorFollowersElement.textContent = data.followers_count;
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
+            }
+            
             // Comment Form Submission (AJAX)
             const commentForm = document.getElementById('commentForm');
             if (commentForm) {
@@ -866,7 +952,11 @@
                                                 {{ strtoupper(substr(auth()->user()->fName, 0, 1)) }}
                                             </div>
                                             <div>
-                                                <div class="comment-author-name">{{ auth()->user()->fName }} {{ auth()->user()->lName }}</div>
+                                                <div class="comment-author-name">
+                                                    <a href="{{ route('profile.show', auth()->user()) }}" style="color: #333; text-decoration: none;">
+                                                        {{ auth()->user()->fName }} {{ auth()->user()->lName }}
+                                                    </a>
+                                                </div>
                                                 <div class="comment-date">Just now</div>
                                             </div>
                                         </div>
@@ -888,6 +978,9 @@
                             if (commentsCountDisplay) {
                                 commentsCountDisplay.textContent = data.comments_count;
                             }
+                            
+                            // Show success message
+                            showToast('Comment added successfully!', 'success');
                         }
                     })
                     .catch(error => console.error('Error:', error));
@@ -910,7 +1003,9 @@
                 } else {
                     // Fallback: Copy to clipboard
                     navigator.clipboard.writeText(url)
-                        .then(() => alert('Link copied to clipboard!'))
+                        .then(() => {
+                            showToast('Link copied to clipboard!', 'success');
+                        })
                         .catch(err => console.error('Failed to copy:', err));
                 }
             };
@@ -925,11 +1020,11 @@
                     if (savedPosts.includes(postId)) {
                         savedPosts = savedPosts.filter(id => id !== postId);
                         this.innerHTML = '<i class="far fa-bookmark"></i><span>Save</span>';
-                        alert('Post removed from saved list');
+                        showToast('Post removed from saved list', 'success');
                     } else {
                         savedPosts.push(postId);
                         this.innerHTML = '<i class="fas fa-bookmark"></i><span>Saved</span>';
-                        alert('Post saved for later!');
+                        showToast('Post saved for later!', 'success');
                     }
                     
                     localStorage.setItem('savedPosts', JSON.stringify(savedPosts));
@@ -941,6 +1036,29 @@
                     saveButton.innerHTML = '<i class="fas fa-bookmark"></i><span>Saved</span>';
                 }
             }
+            
+            // Toast notification function
+            window.showToast = function(message, type = 'normal') {
+                const toast = document.createElement('div');
+                toast.className = 'toast-notification';
+                toast.innerHTML = `
+                    <div class="toast-content">
+                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            };
         });
         
         // Copy link function
@@ -948,12 +1066,43 @@
             const url = window.location.href;
             navigator.clipboard.writeText(url)
                 .then(() => {
-                    alert('Link copied to clipboard!');
+                    showToast('Link copied to clipboard!', 'success');
                 })
                 .catch(err => {
                     console.error('Failed to copy:', err);
                 });
         }
     </script>
+    
+    <style>
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            color: #333;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast-notification.show {
+            transform: translateX(0);
+        }
+        
+        .toast-content i {
+            color: var(--primary-color);
+        }
+        
+        .toast-content i.fa-check-circle {
+            color: #28a745;
+        }
+    </style>
 </body>
 </html>

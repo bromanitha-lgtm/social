@@ -3,7 +3,7 @@
                     <div class="dashboard-grid">
                         <div class="profile-card">
                             <div class="avatar-container">
-                                <img src="https://picsum.photos/seed/alex/200/200.jpg" alt="Profile" class="avatar-img">
+                                <img src="{{ Auth::user()->avatar_url }}" alt="Profile" class="avatar-img">
                             </div>
                             <div class="profile-info">
                                 <h1>{{ Auth::user()->fName }} {{ Auth::user()->lName }}</h1>

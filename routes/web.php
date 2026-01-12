@@ -7,6 +7,8 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\FollowerController;
 use App\Http\Controllers\AvatarController;
+use App\Http\Controllers\ProfileController;
+use App\Models\User;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +25,18 @@ Route::get('/welcome', function () {
 Route::get('/test', function () {
     return view('test.test');
 })->name('test');
+
+// Profile viewing route (public)
+Route::get('/profile/{user}', function (User $user) {
+    return redirect()->route('home')->with([
+        'view_profile' => true,
+        'profile_user_id' => $user->id
+    ]);
+})->name('profile.show');
+
+// Profile AJAX routes
+Route::get('/users/{user}/profile-data', [ProfileController::class, 'getProfileData'])->name('profile.data');
+Route::get('/my-profile-data', [ProfileController::class, 'getMyProfileData'])->name('my.profile.data');
 
 // Search routes (public)
 Route::prefix('search')->group(function () {
@@ -76,12 +90,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/avatar/upload', [AvatarController::class, 'upload'])->name('avatar.upload');
     Route::post('/avatar/remove', [AvatarController::class, 'remove'])->name('avatar.remove');
     
-    // Profile routes (you might want to add these)
-    // Route::get('/profile/{user}', function ($user) {
-    //     // You'll need to create a ProfileController for this
-    //     return view('profile.show', ['user' => \App\Models\User::findOrFail($user)]);
-    // })->name('profile.show');
-    
+    // Profile update
     Route::post('/profile/update', function (\Illuminate\Http\Request $request) {
         $user = Auth::user();
         $user->update($request->validate([
