@@ -173,6 +173,21 @@ Route::prefix('api')->group(function () {
     Route::post('/posts/{post}/like', [PostController::class, 'like'])->name('api.posts.like');
     Route::post('/posts/{post}/unlike', [PostController::class, 'unlike'])->name('api.posts.unlike');
 });
+// Dashboard API routes
+Route::prefix('api/dashboard')->middleware('auth')->group(function () {
+    Route::get('/data', [DashboardController::class, 'getDashboardData']);
+    Route::get('/activities', [DashboardController::class, 'getRecentActivities']);
+    Route::get('/engagement', [DashboardController::class, 'getEngagementData']);
+    Route::get('/performance', [DashboardController::class, 'getPerformanceData']);
+});
+
+// Post routes
+Route::get('/create', function () {
+    return view('posts.create');
+})->name('create');
+
+// My activity route
+Route::get('/api/my-activity', [DashboardController::class, 'getMyActivity'])->middleware('auth');
 
 // Static Pages
 Route::get('/about', function () {

@@ -274,6 +274,9 @@
     .posts-grid {
         display: grid;
         grid-template-columns: repeat(1fr);
+        max-width: 580px;
+        margin-left: auto;
+        margin-right: auto;
         gap: 24px;
         margin-bottom: 40px;
     }
@@ -314,7 +317,7 @@
     .post-image-container {
         position: relative;
         height: fit-content;
-        max-height: 580px;
+        max-height: 520px;
         overflow: hidden;
         display: none;
     }
@@ -352,6 +355,7 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+         height: 320px;
     }
 
     .post-excerpt {
@@ -364,6 +368,7 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
         flex: 1;
+        min-height: 48px;
     }
 
     /* Author Section */
@@ -755,12 +760,12 @@
             width: 100%;
             position: static;
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(1, 1fr);
             gap: 24px;
         }
         
         .posts-grid {
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(minmax(350px, 1fr));
         }
     }
 
@@ -770,7 +775,7 @@
         }
         
         .posts-grid {
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(minmax(320px, 1fr));
         }
     }
 

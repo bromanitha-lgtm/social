@@ -821,3 +821,29 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .twitter-bg { background: #1da1f2; }
 .whatsapp-bg { background: #25d366; }
 .copy-bg { background: var(--primary-color); }
+
+/* Create post page specific styles */
+.create-post-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+.create-post-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Form validation styles */
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
