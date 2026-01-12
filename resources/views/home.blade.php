@@ -20,23 +20,23 @@
                     <span>{{ config('app.name') }}</span>
                 </div>
                 <nav class="nav-links">
-                    <a href="" id="homeBtn" class="nav-item active" data-target="home">
+                    <a href="#home" id="homeBtn" class="nav-item active" data-target="home">
                         <i class="fa-solid fa-house"></i>
                         <span>Home</span>
                     </a>
-                    <a href="" id="profileBtn" class="nav-item" data-target="profile">
+                    <a href="#profile" id="profileBtn" class="nav-item" data-target="profile">
                         <i class="fas fa-user"></i>
-                        <span>My Profile</span>
+                        <span>Profile</span>
                     </a>
-                    <a href="" id="dashboardBtn" class="nav-item" data-target="dashboard">
+                    <a href="#dashboard" id="dashboardBtn" class="nav-item" data-target="dashboard">
                         <i class="fas fa-th-large"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="" id="walletBtn" class="nav-item" data-target="wallet">
+                    <a href="#wallet" id="walletBtn" class="nav-item" data-target="wallet">
                         <i class="fas fa-wallet"></i>
                         <span>Wallet</span>
                     </a>
-                    <a href="" id="settingsBtn" class="nav-item" data-target="settings">
+                    <a href="#settings" id="settingsBtn" class="nav-item" data-target="settings">
                         <i class="fas fa-cog"></i>
                         <span>Settings</span>
                     </a>
@@ -106,15 +106,19 @@
                     <div class="content-container">
                         <!-- Dynamic Profile Content will be loaded here -->
                         <div id="profileContent">
-                            @if(session('view_profile') && session('profile_user_id'))
-                                @php
+                            @php
+                                // Check for direct profile access first
+                                if(session('direct_profile_access') && session('profile_user_id')) {
                                     $profileUser = App\Models\User::find(session('profile_user_id'));
-                                @endphp
-                                @if($profileUser)
-                                    @include('layouts.homeTabs.profile-view', ['profileUser' => $profileUser])
-                                @else
-                                    @include('layouts.homeTabs.my-profile')
-                                @endif
+                                    session()->forget('direct_profile_access');
+                                    
+                                    // Make sure profile tab is active
+                                    echo '<script>document.addEventListener("DOMContentLoaded", function() { switchToProfileTab(); });</script>';
+                                }
+                            @endphp
+                            
+                            @if(isset($profileUser) && $profileUser)
+                                @include('layouts.homeTabs.profile-view', ['profileUser' => $profileUser])
                             @else
                                 @include('layouts.homeTabs.my-profile')
                             @endif
@@ -148,37 +152,20 @@
     <div class="toast-container" id="toastContainer"></div>
     
     <script src="{{ asset('js/home.js') }}"></script>
-    <script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('=== HOME PAGE INITIALIZED ===');
+        console.log('Home page initialized');
         
-        // Debug: Log all elements
-        console.log('Search elements check:');
-        console.log('- Search input:', document.getElementById('searchInput'));
-        console.log('- Search results:', document.getElementById('searchResults'));
-        console.log('- Profile section:', document.getElementById('profile'));
-        console.log('- Profile content:', document.getElementById('profileContent'));
-        
-        // CRITICAL FIX: Event delegation for dynamically loaded search results
-        // We need to attach the event to document because search results are loaded dynamically
+        // ===========================================
+        // 1. SEARCH RESULT CLICK HANDLER - FIXED
+        // ===========================================
         document.addEventListener('click', function(e) {
-            console.log('=== CLICK EVENT FIRED ===');
-            console.log('Clicked element:', e.target);
-            console.log('Clicked element class:', e.target.className);
+            // Handle search result clicks
+            const searchResultItem = e.target.closest('.search-result-item');
             
-            // Method 1: Check if clicked element or its parent is a search result
-            let searchResultItem = e.target;
-            
-            // Traverse up to find .search-result-item
-            while (searchResultItem && !searchResultItem.classList?.contains('search-result-item')) {
-                searchResultItem = searchResultItem.parentElement;
-                if (!searchResultItem) break;
-            }
-            
-            if (searchResultItem && searchResultItem.classList.contains('search-result-item')) {
-                console.log('FOUND SEARCH RESULT ITEM:', searchResultItem);
+            if (searchResultItem) {
                 const url = searchResultItem.getAttribute('data-url');
-                console.log('URL from data attribute:', url);
+                console.log('Search result clicked, URL:', url);
                 
                 if (url && url.includes('/profile/')) {
                     e.preventDefault();
@@ -186,145 +173,341 @@
                     
                     // Extract user ID from URL
                     const userId = url.split('/profile/')[1];
-                    console.log('Extracted User ID:', userId);
+                    console.log('Loading profile for user ID:', userId);
                     
-                    // HIDE search results
-                    const searchResults = document.getElementById('searchResults');
-                    if (searchResults) {
-                        searchResults.style.display = 'none';
-                    }
+                    // Hide search results
+                    document.getElementById('searchResults').style.display = 'none';
+                    document.getElementById('searchInput').value = '';
                     
-                    // Clear search input
-                    const searchInput = document.getElementById('searchInput');
-                    if (searchInput) {
-                        searchInput.value = '';
-                    }
+                    // CRITICAL FIX: Switch to profile tab FIRST
+                    switchToProfileTab();
                     
-                    // SIMPLE SOLUTION: Redirect to profile URL
-                    // This will trigger the route which redirects to home with session data
-                    console.log('Redirecting to:', url);
-                    window.location.href = url;
+                    // Then load the profile
+                    loadUserProfile(userId);
                     
                     return;
                 }
             }
             
-            // Method 2: Check for specific elements that might be inside search results
-            if (e.target.classList.contains('search-result-title') || 
-                e.target.classList.contains('search-result-avatar') ||
-                e.target.classList.contains('search-result-content') ||
-                e.target.closest('.search-result-title') ||
-                e.target.closest('.search-result-avatar') ||
-                e.target.closest('.search-result-content')) {
-                
-                console.log('Clicked inside search result');
-                const resultItem = e.target.closest('.search-result-item');
-                if (resultItem) {
-                    const url = resultItem.getAttribute('data-url');
-                    if (url && url.includes('/profile/')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Navigating to profile URL:', url);
-                        window.location.href = url;
-                    }
-                }
+            // Handle follow button clicks
+            const followBtn = e.target.closest('.follow-btn');
+            if (followBtn && followBtn.hasAttribute('data-user-id')) {
+                e.preventDefault();
+                const userId = followBtn.getAttribute('data-user-id');
+                toggleFollow(userId, followBtn);
+                return;
+            }
+            
+            // Handle back button clicks
+            if (e.target.closest('[onclick*="loadMyProfile"]') || 
+                e.target.closest('[data-action="back-to-profile"]')) {
+                e.preventDefault();
+                loadMyProfile();
+                return;
             }
         });
         
-        // User menu button click - SIMPLE REDIRECT
-        const userMenuBtn = document.getElementById('userMenuBtn');
-        if (userMenuBtn) {
-            userMenuBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('User menu button clicked');
-                @auth
-                    window.location.href = '/profile/{{ Auth::id() }}';
-                @else
-                    window.location.href = '/login';
-                @endauth
+        // ===========================================
+        // 2. USER MENU BUTTON CLICK
+        // ===========================================
+        document.getElementById('userMenuBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            switchToProfileTab();
+            loadMyProfile();
+        });
+        
+        // ===========================================
+        // 3. PROFILE LOADING FUNCTIONS
+        // ===========================================
+        function loadUserProfile(userId) {
+            console.log('AJAX loading profile for user:', userId);
+            
+            showToast('Loading profile...', 'normal');
+            
+            fetch(`/users/${userId}/profile-data`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('profileContent').innerHTML = data.html;
+                    console.log('Profile loaded successfully');
+                    showToast('Profile loaded', 'success');
+                    
+                    // Re-initialize follow buttons in the loaded profile
+                    initializeFollowButtons();
+                } else {
+                    console.error('Failed to load profile:', data);
+                    showToast('Failed to load profile', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading profile:', error);
+                showToast('Error loading profile', 'error');
             });
         }
         
-        // Initialize follow buttons on page load
+        function loadMyProfile() {
+            console.log('Loading my profile');
+            
+            showToast('Loading your profile...', 'normal');
+            
+            fetch('/my-profile-data', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('profileContent').innerHTML = data.html;
+                    console.log('My profile loaded successfully');
+                    showToast('Profile loaded', 'success');
+                    
+                    // Re-initialize follow buttons
+                    initializeFollowButtons();
+                } else {
+                    console.error('Failed to load my profile:', data);
+                    showToast('Failed to load profile', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading my profile:', error);
+                showToast('Error loading profile', 'error');
+            });
+        }
+        
+        // ===========================================
+        // 4. TAB SWITCHING FUNCTION - FIXED
+        // ===========================================
+        function switchToProfileTab() {
+            console.log('Switching to profile tab');
+            
+            // 1. Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // 2. Remove active-section from all sections
+            document.querySelectorAll('.page-section').forEach(section => {
+                section.classList.remove('active-section');
+            });
+            
+            // 3. Add active class to profile nav item
+            document.getElementById('profileBtn').classList.add('active');
+            
+            // 4. Show profile section
+            document.getElementById('profile').classList.add('active-section');
+            
+            // 5. Update URL hash (optional, for browser history)
+            window.history.pushState(null, null, '#profile');
+            
+            console.log('Profile tab activated');
+        }
+        
+        // ===========================================
+        // 5. FOLLOW BUTTON HANDLING
+        // ===========================================
         function initializeFollowButtons() {
             console.log('Initializing follow buttons...');
-            const followButtons = document.querySelectorAll('.follow-btn');
-            console.log('Found follow buttons:', followButtons.length);
             
-            followButtons.forEach(button => {
-                // Remove existing listeners
+            // Remove existing event listeners
+            document.querySelectorAll('.follow-btn').forEach(button => {
                 const newButton = button.cloneNode(true);
                 button.parentNode.replaceChild(newButton, button);
-                
-                // Add click event
-                newButton.addEventListener('click', function(e) {
+            });
+            
+            // Add fresh event listeners
+            document.querySelectorAll('.follow-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     
                     const userId = this.getAttribute('data-user-id');
                     if (!userId) return;
                     
-                    console.log('Follow button clicked for user:', userId);
+                    console.log('Toggling follow for user:', userId);
                     
-                    // Simple form submission
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `/users/${userId}/toggle-follow`;
-                    form.style.display = 'none';
+                    // Store original state
+                    const originalHTML = this.innerHTML;
+                    const originalClasses = this.className;
                     
-                    const csrfToken = document.createElement('input');
-                    csrfToken.type = 'hidden';
-                    csrfToken.name = '_token';
-                    csrfToken.value = '{{ csrf_token() }}';
-                    form.appendChild(csrfToken);
+                    // Show loading state
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    this.disabled = true;
                     
-                    document.body.appendChild(form);
-                    form.submit();
+                    // Send request
+                    fetch(`/users/${userId}/toggle-follow`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        this.disabled = false;
+                        
+                        if (data.success) {
+                            // Update button appearance
+                            if (data.action === 'followed') {
+                                this.innerHTML = '<i class="fas fa-user-check"></i> Following';
+                                this.classList.add('following');
+                                this.classList.remove('btn-primary');
+                                this.classList.add('btn-outline');
+                            } else {
+                                this.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                                this.classList.remove('following');
+                                this.classList.add('btn-primary');
+                                this.classList.remove('btn-outline');
+                            }
+                            
+                            // Update followers count
+                            const followersCountEl = document.getElementById('followersCount');
+                            if (followersCountEl && data.followers_count !== undefined) {
+                                followersCountEl.textContent = data.followers_count;
+                            }
+                            
+                            showToast(data.message || 'Success', 'success');
+                        } else {
+                            // Revert to original state
+                            this.innerHTML = originalHTML;
+                            this.className = originalClasses;
+                            showToast(data.message || 'Failed', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Follow error:', error);
+                        this.disabled = false;
+                        this.innerHTML = originalHTML;
+                        this.className = originalClasses;
+                        showToast('Network error', 'error');
+                    });
                 });
             });
+            
+            console.log('Follow buttons initialized');
         }
         
-        // Initialize on page load
+        // ===========================================
+        // 6. TOGGLE FOLLOW FUNCTION
+        // ===========================================
+        function toggleFollow(userId, buttonElement) {
+            console.log('Toggle follow called for user:', userId);
+            
+            // This is handled by the event listener above
+            // We trigger a click on the button
+            buttonElement.click();
+        }
+        
+        // ===========================================
+        // 7. TOAST FUNCTION
+        // ===========================================
+        function showToast(message, type = 'normal') {
+            const container = document.getElementById('toastContainer');
+            if (!container) {
+                const newContainer = document.createElement('div');
+                newContainer.id = 'toastContainer';
+                newContainer.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 1000;';
+                document.body.appendChild(newContainer);
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-check-circle';
+            if (type === 'error') icon = 'fa-exclamation-circle';
+            
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // ===========================================
+        // 8. INITIALIZE ON PAGE LOAD
+        // ===========================================
+        
+        // Check if we should show a specific profile on page load
+        @if(session('view_profile') && session('profile_user_id'))
+            console.log('Showing profile from session');
+            // The PHP code in the blade template already handles this
+            // But we need to make sure the profile tab is active
+            setTimeout(() => {
+                switchToProfileTab();
+            }, 100);
+        @endif
+        
+        // Initialize follow buttons for any existing content
         initializeFollowButtons();
         
-        // DEBUG: Test function to manually load a profile
-        window.testProfileLoad = function(userId) {
-            console.log('TEST: Manually loading profile for user:', userId);
-            window.location.href = `/profile/${userId}`;
+        // ===========================================
+        // 9. FIX NAVIGATION SYSTEM
+        // ===========================================
+        
+        // Store the original navigation click handler
+        const originalNavClickHandler = function(e) {
+            e.preventDefault();
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            
+            // Add active class to clicked nav item
+            this.classList.add('active');
+            
+            // Hide all sections
+            document.querySelectorAll('.page-section').forEach(sec => {
+                sec.classList.remove('active-section');
+            });
+            
+            // Show the target section
+            const targetId = this.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active-section');
+            
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('active');
+            }
         };
         
-        // DEBUG: Test AJAX profile load
-        window.testAjaxProfileLoad = function(userId) {
-            console.log('TEST AJAX: Loading profile for user:', userId);
-            fetch(`/users/${userId}/profile-data`)
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Profile data:', data);
-                    if (data.success && data.html) {
-                        document.getElementById('profileContent').innerHTML = data.html;
-                        initializeFollowButtons();
-                        
-                        // Switch to profile tab
-                        document.querySelectorAll('.nav-item').forEach(item => {
-                            item.classList.remove('active');
-                        });
-                        document.getElementById('profileBtn').classList.add('active');
-                        
-                        document.querySelectorAll('.page-section').forEach(section => {
-                            section.classList.remove('active-section');
-                        });
-                        document.getElementById('profile').classList.add('active-section');
-                    }
-                })
-                .catch(error => {
-                    console.error('AJAX Error:', error);
-                });
-        };
+        // Re-attach navigation click handlers
+        document.querySelectorAll('.nav-item[data-target]').forEach(item => {
+            item.removeEventListener('click', originalNavClickHandler);
+            item.addEventListener('click', originalNavClickHandler);
+        });
         
-        console.log('=== SETUP COMPLETE ===');
+        console.log('JavaScript setup complete');
+        
+        // ===========================================
+        // 10. MAKE FUNCTIONS AVAILABLE GLOBALLY
+        // ===========================================
+        window.loadUserProfile = loadUserProfile;
+        window.loadMyProfile = loadMyProfile;
+        window.switchToProfileTab = switchToProfileTab;
+        window.initializeFollowButtons = initializeFollowButtons;
     });
 </script>
     

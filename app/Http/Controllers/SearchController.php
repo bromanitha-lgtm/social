@@ -37,11 +37,14 @@ class SearchController extends Controller
             $users = [];
             $posts = [];
             
-            // Search Users
+            // Search Users - FIXED: Use correct relationship names
             try {
-                $userResults = User::where('fName', 'like', "%{$query}%")
-                    ->orWhere('lName', 'like', "%{$query}%")
-                    ->orWhere('email', 'like', "%{$query}%")
+                $userResults = User::where(function($q) use ($query) {
+                        $q->where('fName', 'like', "%{$query}%")
+                          ->orWhere('lName', 'like', "%{$query}%")
+                          ->orWhere('email', 'like', "%{$query}%");
+                    })
+                    ->withCount(['posts', 'followers', 'followings'])
                     ->take(5)
                     ->get();
                 
@@ -50,21 +53,23 @@ class SearchController extends Controller
                         'id' => $user->id,
                         'name' => $user->fName . ' ' . $user->lName,
                         'email' => $user->email,
-                        'avatar_url' => $this->getAvatarUrl($user),
-                        'posts_count' => $user->posts()->count(),
-                        'followers_count' => $user->followers()->count(),
-                        'following_count' => $user->followings()->count(),
+                        'avatar_url' => $user->small_avatar_url,
+                        'posts_count' => $user->posts_count,
+                        'followers_count' => $user->followers_count,
+                        'following_count' => $user->followings_count,
                         'type' => 'user',
                         'url' => url('/profile/' . $user->id)
                     ];
                 }
             } catch (\Exception $e) {
                 Log::error('User search error: ' . $e->getMessage());
+                $users = [];
             }
             
             // Search Posts
             try {
-                $postResults = Post::with('user')
+                $postResults = Post::with(['user'])
+                    ->withCount(['likes', 'comments'])
                     ->where(function($q) use ($query) {
                         $q->where('title', 'like', "%{$query}%")
                           ->orWhere('content', 'like', "%{$query}%");
@@ -80,7 +85,7 @@ class SearchController extends Controller
                         'title' => $post->title,
                         'excerpt' => $this->getExcerpt($post->content),
                         'user_name' => $post->user ? ($post->user->fName . ' ' . $post->user->lName) : 'Unknown',
-                        'user_avatar' => $post->user ? $this->getAvatarUrl($post->user) : $this->getDefaultAvatar(),
+                        'user_avatar' => $post->user ? $post->user->small_avatar_url : $this->getDefaultAvatar(),
                         'likes_count' => $post->likes_count ?? 0,
                         'comments_count' => $post->comments_count ?? 0,
                         'views' => $post->views ?? 0,
@@ -90,6 +95,7 @@ class SearchController extends Controller
                 }
             } catch (\Exception $e) {
                 Log::error('Post search error: ' . $e->getMessage());
+                $posts = [];
             }
             
             return response()->json([
@@ -217,20 +223,7 @@ class SearchController extends Controller
             return $this->getDefaultAvatar();
         }
         
-        // Check if user has avatar property
-        if (property_exists($user, 'avatar') && $user->avatar) {
-            return asset('storage/' . $user->avatar);
-        }
-        
-        // Check if user has profile_pic property
-        if (property_exists($user, 'profile_pic') && $user->profile_pic) {
-            return asset('storage/' . $user->profile_pic);
-        }
-        
-        // Use email for gravatar
-        $email = $user->email ?? 'user@example.com';
-        $hash = md5(strtolower(trim($email)));
-        return "https://www.gravatar.com/avatar/{$hash}?d=identicon&s=60";
+        return $user->small_avatar_url;
     }
     
     /**

@@ -26,12 +26,17 @@ Route::get('/test', function () {
     return view('test.test');
 })->name('test');
 
-// Profile viewing route (public)
+// Profile viewing route (public) - FIXED FOR AUTO TAB SWITCH
 Route::get('/profile/{user}', function (User $user) {
-    return redirect()->route('home')->with([
+    // Store multiple session flags for different scenarios
+    session([
         'view_profile' => true,
-        'profile_user_id' => $user->id
+        'profile_user_id' => $user->id,
+        'direct_profile_access' => true, // Flag for direct profile access
+        'should_switch_to_profile_tab' => true // New flag to force tab switch
     ]);
+    
+    return redirect()->route('home');
 })->name('profile.show');
 
 // Profile AJAX routes
@@ -105,6 +110,32 @@ Route::middleware(['auth'])->group(function () {
             'message' => 'Profile updated successfully'
         ]);
     })->name('profile.update');
+    
+    // Password change route (add this if missing)
+    Route::post('/profile/change-password', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|confirmed',
+        ]);
+        
+        $user = Auth::user();
+        
+        if (!\Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect'
+            ], 422);
+        }
+        
+        $user->update([
+            'password' => \Hash::make($request->new_password)
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully'
+        ]);
+    })->name('profile.change-password');
 });
 
 // Fallback route (keep at the end)
