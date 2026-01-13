@@ -3,7 +3,7 @@
     <div class="section-header">
         <h2 class="section-title">Latest Posts</h2>
         @auth
-        <a href="{{ route('posts.create') }}" class="btn-create-post">
+        <a href="{{ route('create') }}" class="btn-create-post">
             <i class="fas fa-plus"></i> Create Post
         </a>
         @endauth

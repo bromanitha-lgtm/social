@@ -10,6 +10,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Prism.js for code highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism.min.css" rel="stylesheet">
+    
     <style>
         :root {
             --primary-color: #667eea;
@@ -143,8 +146,83 @@
             margin-bottom: 2rem;
         }
         
+        .post-content h1, .post-content h2, .post-content h3, .post-content h4, .post-content h5, .post-content h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #222;
+        }
+        
+        .post-content h1 { font-size: 2rem; }
+        .post-content h2 { font-size: 1.75rem; }
+        .post-content h3 { font-size: 1.5rem; }
+        .post-content h4 { font-size: 1.25rem; }
+        .post-content h5 { font-size: 1.1rem; }
+        .post-content h6 { font-size: 1rem; }
+        
         .post-content p {
             margin-bottom: 1.5rem;
+        }
+        
+        .post-content strong, .post-content b {
+            font-weight: 700;
+        }
+        
+        .post-content em, .post-content i {
+            font-style: italic;
+        }
+        
+        .post-content u {
+            text-decoration: underline;
+        }
+        
+        .post-content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .post-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .post-content ul, .post-content ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+        
+        .post-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .post-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .post-content pre {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .post-content code {
+            background: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .post-content pre code {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
         }
         
         .post-content img {
@@ -546,6 +624,40 @@
             z-index: 9999;
             transition: width 0.1s;
         }
+        
+        /* Toast Notification */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            color: #333;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast-notification.show {
+            transform: translateX(0);
+        }
+        
+        .toast-content i {
+            color: var(--primary-color);
+        }
+        
+        .toast-content i.fa-check-circle {
+            color: #28a745;
+        }
+        
+        .toast-content i.fa-exclamation-circle {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -610,9 +722,62 @@
                             </div>
                         </div>
                         
-                        <!-- Post Content -->
+                        <!-- Post Content with HTML formatting -->
                         <div class="post-content">
-                            {!! nl2br(e($post->content)) !!}
+                            @php
+                                use Illuminate\Support\Str;
+                                
+                                // Check if HTML Purifier is installed
+                                if (function_exists('clean')) {
+                                    echo clean($post->content);
+                                } else {
+                                    // Safe HTML tags for formatting
+                                    $allowedTags = '<h1><h2><h3><h4><h5><h6><p><br><strong><b><em><i><u><a><ul><ol><li><blockquote><code><pre><span><div>';
+                                    
+                                    // First, strip all tags except allowed ones
+                                    $content = strip_tags($post->content, $allowedTags);
+                                    
+                                    // Remove dangerous attributes from allowed tags
+                                    $content = preg_replace_callback('/<(\w+)([^>]*)>/', function($matches) {
+                                        $tag = $matches[1];
+                                        $attributes = $matches[2];
+                                        
+                                        // List of safe attributes for each tag
+                                        $safeAttributes = [
+                                            'a' => ['href', 'title', 'target'],
+                                            'img' => ['src', 'alt', 'width', 'height'],
+                                            'span' => ['style', 'class'],
+                                            'div' => ['style', 'class'],
+                                        ];
+                                        
+                                        // Clean attributes
+                                        if (isset($safeAttributes[$tag])) {
+                                            $allowedAttrs = $safeAttributes[$tag];
+                                            $cleanAttrs = '';
+                                            
+                                            // Extract attributes
+                                            preg_match_all('/(\w+)\s*=\s*"([^"]*)"|\'([^\']*)\'/', $attributes, $attrMatches);
+                                            
+                                            for ($i = 0; $i < count($attrMatches[0]); $i++) {
+                                                $attrName = $attrMatches[1][$i];
+                                                $attrValue = !empty($attrMatches[2][$i]) ? $attrMatches[2][$i] : $attrMatches[3][$i];
+                                                
+                                                if (in_array($attrName, $allowedAttrs)) {
+                                                    // Remove dangerous content from attributes
+                                                    $attrValue = preg_replace('/javascript:/i', '', $attrValue);
+                                                    $cleanAttrs .= ' ' . $attrName . '="' . htmlspecialchars($attrValue) . '"';
+                                                }
+                                            }
+                                            
+                                            return '<' . $tag . $cleanAttrs . '>';
+                                        }
+                                        
+                                        return '<' . $tag . '>';
+                                    }, $content);
+                                    
+                                    echo $content;
+                                }
+                            @endphp
                         </div>
                         
                         <!-- Post Actions -->
@@ -637,7 +802,7 @@
                             </button>
                             
                             @auth
-                            <button class="action-btn save-btn">
+                            <button class="action-btn save-btn" id="saveButton">
                                 <i class="far fa-bookmark"></i>
                                 <span>Save</span>
                             </button>
@@ -741,7 +906,7 @@
                                 <div class="author-stat-label">Posts</div>
                             </div>
                             <div class="author-stat">
-                                <div class="author-stat-number">{{ $post->user->followers_count }}</div>
+                                <div class="author-stat-number">{{ $post->user->followers_count ?? 0 }}</div>
                                 <div class="author-stat-label">Followers</div>
                             </div>
                         </div>
@@ -821,6 +986,8 @@
         </div>
     </div>
     
+    <!-- Prism.js for code highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -834,8 +1001,13 @@
                 const docHeight = document.documentElement.scrollHeight;
                 const scrolled = window.scrollY;
                 const progress = (scrolled / (docHeight - winHeight)) * 100;
-                readingProgress.style.width = progress + '%';
+                readingProgress.style.width = Math.min(progress, 100) + '%';
             });
+            
+            // Initialize Prism for code highlighting
+            if (typeof Prism !== 'undefined') {
+                Prism.highlightAll();
+            }
             
             // Like Functionality
             const likeButton = document.getElementById('likeButton');
@@ -868,9 +1040,14 @@
                             if (likesCount) {
                                 likesCount.textContent = data.likes_count + ' likes';
                             }
+                            
+                            showToast(data.message || (isLiked ? 'Post unliked!' : 'Post liked!'), 'success');
                         }
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('An error occurred. Please try again.', 'error');
+                    });
                 });
             }
             
@@ -910,7 +1087,10 @@
                             }
                         }
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('An error occurred. Please try again.', 'error');
+                    });
                 });
             }
             
@@ -922,6 +1102,12 @@
                     
                     const formData = new FormData(this);
                     const postId = '{{ $post->id }}';
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    const originalBtnText = submitBtn.innerHTML;
+                    
+                    // Show loading state
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Posting...';
+                    submitBtn.disabled = true;
                     
                     fetch(`/posts/${postId}/comment`, {
                         method: 'POST',
@@ -932,6 +1118,10 @@
                     })
                     .then(response => response.json())
                     .then(data => {
+                        // Reset button
+                        submitBtn.innerHTML = originalBtnText;
+                        submitBtn.disabled = false;
+                        
                         if (data.success) {
                             // Clear textarea
                             this.querySelector('textarea').value = '';
@@ -943,6 +1133,13 @@
                             if (emptyComments) {
                                 emptyComments.remove();
                             }
+                            
+                            const now = new Date();
+                            const formattedDate = now.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                            }) + ' (' + 'Just now' + ')';
                             
                             const newComment = `
                                 <div class="comment-item">
@@ -981,37 +1178,21 @@
                             
                             // Show success message
                             showToast('Comment added successfully!', 'success');
+                        } else {
+                            showToast(data.message || 'Failed to add comment', 'error');
                         }
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => {
+                        console.error('Error:', error);
+                        submitBtn.innerHTML = originalBtnText;
+                        submitBtn.disabled = false;
+                        showToast('An error occurred. Please try again.', 'error');
+                    });
                 });
             }
             
-            // Share Functionality
-            window.sharePost = function() {
-                const title = '{{ $post->title }}';
-                const url = window.location.href;
-                
-                if (navigator.share) {
-                    navigator.share({
-                        title: title,
-                        text: 'Check out this post!',
-                        url: url
-                    })
-                    .then(() => console.log('Shared successfully'))
-                    .catch(error => console.log('Error sharing:', error));
-                } else {
-                    // Fallback: Copy to clipboard
-                    navigator.clipboard.writeText(url)
-                        .then(() => {
-                            showToast('Link copied to clipboard!', 'success');
-                        })
-                        .catch(err => console.error('Failed to copy:', err));
-                }
-            };
-            
             // Save for later functionality
-            const saveButton = document.querySelector('.save-btn');
+            const saveButton = document.getElementById('saveButton');
             if (saveButton) {
                 saveButton.addEventListener('click', function() {
                     const postId = '{{ $post->id }}';
@@ -1036,30 +1217,31 @@
                     saveButton.innerHTML = '<i class="fas fa-bookmark"></i><span>Saved</span>';
                 }
             }
-            
-            // Toast notification function
-            window.showToast = function(message, type = 'normal') {
-                const toast = document.createElement('div');
-                toast.className = 'toast-notification';
-                toast.innerHTML = `
-                    <div class="toast-content">
-                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
-                        <span>${message}</span>
-                    </div>
-                `;
-                
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.classList.add('show');
-                }, 10);
-                
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            };
         });
+        
+        // Share Functionality
+        window.sharePost = function() {
+            const title = '{{ $post->title }}';
+            const url = window.location.href;
+            const text = 'Check out this post: ' + title;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: 'Check out this post!',
+                    url: url
+                })
+                .then(() => {
+                    showToast('Shared successfully!', 'success');
+                })
+                .catch(error => {
+                    console.log('Error sharing:', error);
+                    copyLink();
+                });
+            } else {
+                copyLink();
+            }
+        };
         
         // Copy link function
         function copyLink() {
@@ -1070,39 +1252,46 @@
                 })
                 .catch(err => {
                     console.error('Failed to copy:', err);
+                    
+                    // Fallback method
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    showToast('Link copied to clipboard!', 'success');
                 });
         }
+        
+        // Toast notification function
+        window.showToast = function(message, type = 'normal') {
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-check-circle';
+            if (type === 'error') icon = 'fa-exclamation-circle';
+            
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <i class="fas ${icon}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
     </script>
-    
-    <style>
-        .toast-notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: white;
-            color: #333;
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 9999;
-            transform: translateX(120%);
-            transition: transform 0.3s ease;
-        }
-        
-        .toast-notification.show {
-            transform: translateX(0);
-        }
-        
-        .toast-content i {
-            color: var(--primary-color);
-        }
-        
-        .toast-content i.fa-check-circle {
-            color: #28a745;
-        }
-    </style>
 </body>
 </html>

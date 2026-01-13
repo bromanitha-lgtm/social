@@ -24,8 +24,8 @@ use App\Models\User;
 */
 
 // Welcome/Home Routes
-Route::get('/', [HomeController::class, 'index'])->name('welcome');
-Route::get('/home', [HomeController::class, 'index'])->name('home');
+Route::get('/welcome', [HomeController::class, 'index'])->name('welcome');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Authentication Routes
 Auth::routes();
