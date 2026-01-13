@@ -153,7 +153,7 @@ class PostController extends Controller
         // Increment views
         $post->increment('views');
         
-        // Load relationships
+        // Load relationships with proper conditions
         $post->load(['user', 'comments.user', 'likes.user']);
         
         // Check if user liked the post
@@ -164,11 +164,11 @@ class PostController extends Controller
 
         // Get related posts
         $relatedPosts = Post::where('user_id', $post->user_id)
-                          ->where('id', '!=', $post->id)
-                          ->withCount(['likes', 'comments'])
-                          ->latest()
-                          ->limit(4)
-                          ->get();
+                        ->where('id', '!=', $post->id)
+                        ->withCount(['likes', 'comments'])
+                        ->latest()
+                        ->limit(4)
+                        ->get();
 
         return view('posts.show', compact('post', 'isLiked', 'relatedPosts'));
     }

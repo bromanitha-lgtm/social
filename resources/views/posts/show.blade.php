@@ -249,16 +249,17 @@
             font-weight: 500;
             transition: all 0.3s;
             cursor: pointer;
-        }
-        
-        .like-btn {
-            background-color: white;
             border: 1px solid var(--border-color);
+            background: white;
             color: #666;
         }
         
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
         .like-btn:hover {
-            background-color: #fff5f5;
             border-color: #ff6b6b;
             color: #ff6b6b;
         }
@@ -269,26 +270,12 @@
             color: white;
         }
         
-        .share-btn {
-            background-color: white;
-            border: 1px solid var(--border-color);
-            color: #666;
-        }
-        
         .share-btn:hover {
-            background-color: #f8f9fa;
             border-color: var(--primary-color);
             color: var(--primary-color);
         }
         
-        .save-btn {
-            background-color: white;
-            border: 1px solid var(--border-color);
-            color: #666;
-        }
-        
         .save-btn:hover {
-            background-color: #f8f9fa;
             border-color: #20c997;
             color: #20c997;
         }
@@ -302,8 +289,6 @@
         .edit-btn:hover {
             background-color: #5a67d8;
             color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         
         .delete-btn {
@@ -326,19 +311,15 @@
         .follow-btn:hover {
             background-color: #5a67d8;
             color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         
         .follow-btn.following {
             background-color: #6c757d;
-            color: white;
-            border: 1px solid #6c757d;
+            border-color: #6c757d;
         }
         
         .follow-btn.following:hover {
             background-color: #5a6268;
-            border-color: #545b62;
         }
         
         .comments-section {
@@ -658,6 +639,31 @@
         .toast-content i.fa-exclamation-circle {
             color: #dc3545;
         }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #5a67d8;
+            border-color: #5a67d8;
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .btn-outline:hover {
+            background-color: var(--light-bg);
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -787,13 +793,13 @@
                                     id="likeButton"
                                     data-post-id="{{ $post->id }}">
                                 <i class="{{ $isLiked ? 'fas' : 'far' }} fa-heart"></i>
-                                <span>Like</span>
+                                <span id="likeText">{{ $isLiked ? 'Liked' : 'Like' }}</span>
                             </button>
                             @else
-                            <a href="{{ route('login') }}" class="action-btn like-btn">
+                            <button class="action-btn like-btn" onclick="requestLogin('like')">
                                 <i class="far fa-heart"></i>
                                 <span>Like</span>
-                            </a>
+                            </button>
                             @endauth
                             
                             <button class="action-btn share-btn" onclick="sharePost()">
@@ -803,6 +809,11 @@
                             
                             @auth
                             <button class="action-btn save-btn" id="saveButton">
+                                <i class="far fa-bookmark"></i>
+                                <span>Save</span>
+                            </button>
+                            @else
+                            <button class="action-btn save-btn" onclick="requestLogin('save')">
                                 <i class="far fa-bookmark"></i>
                                 <span>Save</span>
                             </button>
@@ -851,7 +862,7 @@
                     @else
                     <div class="login-prompt">
                         <p class="mb-0">
-                            <a href="{{ route('login') }}" class="login-link">Login</a> to post a comment.
+                            <a href="{{ route('login') }}?redirect={{ urlencode(request()->fullUrl()) }}" class="login-link">Login</a> to post a comment.
                         </p>
                     </div>
                     @endauth
@@ -918,7 +929,7 @@
                                         data-user-id="{{ $post->user->id }}"
                                         style="width: 100%; margin-top: 15px;">
                                     <i class="fas {{ Auth::user()->isFollowing($post->user) ? 'fa-user-check' : 'fa-user-plus' }} me-2"></i>
-                                    {{ Auth::user()->isFollowing($post->user) ? 'Following' : 'Follow' }}
+                                    <span id="followText">{{ Auth::user()->isFollowing($post->user) ? 'Following' : 'Follow' }}</span>
                                 </button>
                             @else
                                 <a href="{{ route('home') }}" class="action-btn edit-btn" style="width: 100%; margin-top: 15px;">
@@ -927,10 +938,10 @@
                                 </a>
                             @endif
                         @else
-                            <a href="{{ route('login') }}" class="action-btn follow-btn" style="width: 100%; margin-top: 15px;">
+                            <button class="action-btn follow-btn" onclick="requestLogin('follow')" style="width: 100%; margin-top: 15px;">
                                 <i class="fas fa-user-plus me-2"></i>
                                 Follow
-                            </a>
+                            </button>
                         @endauth
                     </div>
                     
@@ -1016,24 +1027,43 @@
                     const postId = this.getAttribute('data-post-id');
                     const isLiked = this.classList.contains('liked');
                     const likesCount = document.getElementById('likesCount');
+                    const likeIcon = this.querySelector('i');
+                    const likeText = this.querySelector('#likeText');
+                    
+                    // Show loading state
+                    this.classList.add('loading');
                     
                     fetch(isLiked ? `/posts/${postId}/unlike` : `/posts/${postId}/like`, {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             'Content-Type': 'application/json',
-                        }
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'same-origin'
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        // Remove loading state
+                        this.classList.remove('loading');
+                        
+                        if (response.status === 401) {
+                            showToast('Please login to like posts', 'error');
+                            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                            return Promise.reject('Unauthorized');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
-                        if (data.success) {
+                        if (data && data.success) {
                             // Update UI
                             if (isLiked) {
                                 this.classList.remove('liked');
-                                this.querySelector('i').className = 'far fa-heart';
+                                likeIcon.className = 'far fa-heart';
+                                likeText.textContent = 'Like';
                             } else {
                                 this.classList.add('liked');
-                                this.querySelector('i').className = 'fas fa-heart';
+                                likeIcon.className = 'fas fa-heart';
+                                likeText.textContent = 'Liked';
                             }
                             
                             // Update likes count
@@ -1042,11 +1072,16 @@
                             }
                             
                             showToast(data.message || (isLiked ? 'Post unliked!' : 'Post liked!'), 'success');
+                        } else if (data) {
+                            showToast(data.message || 'Failed to like post', 'error');
                         }
                     })
                     .catch(error => {
+                        this.classList.remove('loading');
                         console.error('Error:', error);
-                        showToast('An error occurred. Please try again.', 'error');
+                        if (error !== 'Unauthorized') {
+                            showToast('An error occurred. Please try again.', 'error');
+                        }
                     });
                 });
             }
@@ -1057,24 +1092,43 @@
                 followAuthorButton.addEventListener('click', function() {
                     const userId = this.getAttribute('data-user-id');
                     const isFollowing = this.classList.contains('following');
+                    const followIcon = this.querySelector('i');
+                    const followText = this.querySelector('#followText');
+                    
+                    // Show loading state
+                    this.classList.add('loading');
                     
                     fetch(`/users/${userId}/toggle-follow`, {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             'Content-Type': 'application/json',
-                        }
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'same-origin'
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        // Remove loading state
+                        this.classList.remove('loading');
+                        
+                        if (response.status === 401) {
+                            showToast('Please login to follow users', 'error');
+                            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                            return Promise.reject('Unauthorized');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
-                        if (data.success) {
+                        if (data && data.success) {
                             // Update UI
                             if (data.action === 'followed') {
                                 this.classList.add('following');
-                                this.innerHTML = '<i class="fas fa-user-check me-2"></i> Following';
+                                followIcon.className = 'fas fa-user-check me-2';
+                                followText.textContent = 'Following';
                             } else {
                                 this.classList.remove('following');
-                                this.innerHTML = '<i class="fas fa-user-plus me-2"></i> Follow';
+                                followIcon.className = 'fas fa-user-plus me-2';
+                                followText.textContent = 'Follow';
                             }
                             
                             // Show toast notification
@@ -1085,11 +1139,16 @@
                             if (authorFollowersElement && data.followers_count !== undefined) {
                                 authorFollowersElement.textContent = data.followers_count;
                             }
+                        } else if (data) {
+                            showToast(data.message || 'Failed to follow user', 'error');
                         }
                     })
                     .catch(error => {
+                        this.classList.remove('loading');
                         console.error('Error:', error);
-                        showToast('An error occurred. Please try again.', 'error');
+                        if (error !== 'Unauthorized') {
+                            showToast('An error occurred. Please try again.', 'error');
+                        }
                     });
                 });
             }
@@ -1113,16 +1172,24 @@
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
                         },
                         body: formData
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (response.status === 401) {
+                            showToast('Please login to comment', 'error');
+                            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                            return Promise.reject('Unauthorized');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         // Reset button
                         submitBtn.innerHTML = originalBtnText;
                         submitBtn.disabled = false;
                         
-                        if (data.success) {
+                        if (data && data.success) {
                             // Clear textarea
                             this.querySelector('textarea').value = '';
                             
@@ -1134,24 +1201,17 @@
                                 emptyComments.remove();
                             }
                             
-                            const now = new Date();
-                            const formattedDate = now.toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric',
-                                year: 'numeric'
-                            }) + ' (' + 'Just now' + ')';
-                            
                             const newComment = `
                                 <div class="comment-item">
                                     <div class="comment-header">
                                         <div class="comment-author">
                                             <div class="comment-avatar">
-                                                {{ strtoupper(substr(auth()->user()->fName, 0, 1)) }}
+                                                ${data.comment.user_initials || 'U'}
                                             </div>
                                             <div>
                                                 <div class="comment-author-name">
-                                                    <a href="{{ route('profile.show', auth()->user()) }}" style="color: #333; text-decoration: none;">
-                                                        {{ auth()->user()->fName }} {{ auth()->user()->lName }}
+                                                    <a href="/profile/${data.comment.user_id}" style="color: #333; text-decoration: none;">
+                                                        ${data.comment.user_name || 'User'}
                                                     </a>
                                                 </div>
                                                 <div class="comment-date">Just now</div>
@@ -1178,7 +1238,7 @@
                             
                             // Show success message
                             showToast('Comment added successfully!', 'success');
-                        } else {
+                        } else if (data) {
                             showToast(data.message || 'Failed to add comment', 'error');
                         }
                     })
@@ -1186,7 +1246,9 @@
                         console.error('Error:', error);
                         submitBtn.innerHTML = originalBtnText;
                         submitBtn.disabled = false;
-                        showToast('An error occurred. Please try again.', 'error');
+                        if (error !== 'Unauthorized') {
+                            showToast('An error occurred. Please try again.', 'error');
+                        }
                     });
                 });
             }
@@ -1264,6 +1326,19 @@
                     showToast('Link copied to clipboard!', 'success');
                 });
         }
+        
+        // Request login function
+        window.requestLogin = function(action) {
+            const actions = {
+                'like': 'like posts',
+                'save': 'save posts',
+                'comment': 'post comments',
+                'follow': 'follow users'
+            };
+            
+            showToast(`Please login to ${actions[action] || 'perform this action'}`, 'error');
+            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        };
         
         // Toast notification function
         window.showToast = function(message, type = 'normal') {
