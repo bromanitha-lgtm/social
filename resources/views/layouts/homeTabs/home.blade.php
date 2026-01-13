@@ -59,7 +59,7 @@
                     <h3>No posts found</h3>
                     <p>Be the first to create a post!</p>
                     @auth
-                    <a href="{{ route('posts.create') }}" class="btn-create-post">
+                    <a href="{{ route('create') }}" class="btn-create-post">
                         <i class="fas fa-plus"></i> Create Your First Post
                     </a>
                     @else
@@ -72,63 +72,141 @@
         </div>
 
         <!-- Right: Fixed Profile Card -->
+        <!-- Right: Fixed Profile Card -->
         <div class="home-sidebar">
-            <div class="profile-card">
-                <div class="profile-header">
-                    <div class="profile-avatar">
-                        <i class="fas fa-user"></i>
+            <!-- User Profile Card -->
+            <div class="sidebar-profile-card">
+                <!-- Avatar Section -->
+                <div class="sidebar-avatar-section">
+                    <div class="avatar-wrapper">
+                        @if(Auth::user()->avatar_url)
+                            <img src="{{ Auth::user()->avatar_url }}" 
+                                alt="{{ Auth::user()->fName }}" 
+                                class="avatar-img sidebar-user-avatar ">
+                        @else
+                            <div class="sidebar-default-avatar">
+                                {{ substr(Auth::user()->fName, 0, 1) }}{{ substr(Auth::user()->lName, 0, 1) }}
+                            </div>
+                        @endif
+                        <div class="avatar-status online"></div>
                     </div>
-                    <div class="profile-info">
-                        <h3 class="profile-name">John Doe</h3>
-                        <p class="profile-role">Community Member</p>
+                    
+                    <!-- User Info -->
+                    <div class="sidebar-user-info">
+                        <h3 class="sidebar-user-name">
+                            {{ Auth::user()->fName }} {{ Auth::user()->lName }}
+                        </h3>
+                        <p class="sidebar-user-email">
+                            <i class="fas fa-envelope"></i> {{ Auth::user()->email }}
+                        </p>
+                        
+                        <!-- Join Date -->
+                        <p class="sidebar-join-date">
+                            <i class="fas fa-calendar-alt"></i> 
+                            Joined {{ Auth::user()->created_at->format('M Y') }}
+                        </p>
                     </div>
                 </div>
-                <div class="profile-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-pen"></i>
-                        <div class="stat-details">
-                            <span class="stat-value">12</span>
+
+                <!-- User Stats -->
+                <div class="sidebar-stats-grid">
+                    <div class="sidebar-stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-pen-nib"></i>
+                        </div>
+                        <div class="stat-content">
+                            <span class="stat-number">{{ Auth::user()->posts()->count() }}</span>
                             <span class="stat-label">Posts</span>
                         </div>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-heart"></i>
-                        <div class="stat-details">
-                            <span class="stat-value">47</span>
-                            <span class="stat-label">Likes</span>
+                    
+                    <div class="sidebar-stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <span class="stat-number">{{ Auth::user()->followers_count }}</span>
+                            <span class="stat-label">Followers</span>
                         </div>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-comment"></i>
-                        <div class="stat-details">
-                            <span class="stat-value">23</span>
+                    
+                    <div class="sidebar-stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                        <div class="stat-content">
+                            <span class="stat-number">{{ Auth::user()->following_count }}</span>
+                            <span class="stat-label">Following</span>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-comment-dots"></i>
+                        </div>
+                        <div class="stat-content">
+                            <span class="stat-number">{{ Auth::user()->comments()->count() }}</span>
                             <span class="stat-label">Comments</span>
                         </div>
                     </div>
                 </div>
-                <div class="profile-actions">
-                    <button class="btn-profile-action">
-                        <i class="fas fa-cog"></i> Settings
+
+                <!-- Quick Actions -->
+                <div class="sidebar-quick-actions">
+                    <button class="quick-action-btn" id="userMenuBtn" onclick="window.location.href='profile/{{ Auth::user()->id }}'">
+                        <i class="fas fa-user-edit"></i>
+                        <span>Edit Profile</span>
                     </button>
-                    <button class="btn-profile-action">
-                        <i class="fas fa-sign-out-alt"></i> Logout
+                    <button class="quick-action-btn" onclick="window.location.href='/create'">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>New Post</span>
                     </button>
                 </div>
             </div>
 
             <!-- Trending Topics -->
-            <div class="trending-card">
-                <h3 class="trending-title">
-                    <i class="fas fa-hashtag"></i> Trending Topics
-                </h3>
-                <div class="trending-tags">
-                    <span class="trending-tag">#Technology</span>
-                    <span class="trending-tag">#Design</span>
-                    <span class="trending-tag">#Development</span>
-                    <span class="trending-tag">#Tips</span>
-                    <span class="trending-tag">#Community</span>
+            {{-- <div class="sidebar-trending-card">
+                <div class="trending-header">
+                    <i class="fas fa-fire trending-icon"></i>
+                    <h3 class="trending-title">Trending Topics</h3>
                 </div>
-            </div>
+                <div class="trending-list">
+                    @foreach(['Technology', 'Design', 'Development', 'Programming', 'AI', 'Web3', 'Startup', 'Tips'] as $tag)
+                        <a href="/tags/{{ strtolower($tag) }}" class="trending-tag-item">
+                            <span class="tag-hashtag">#</span>
+                            <span class="tag-name">{{ $tag }}</span>
+                            <span class="tag-count">{{ rand(100, 1000) }}</span>
+                        </a>
+                    @endforeach
+                </div>
+                <a href="/explore/trending" class="view-all-trending">
+                    <i class="fas fa-arrow-right"></i> View all trends
+                </a>
+            </div> --}}
+
+            <!-- Recently Active Users -->
+            {{-- <div class="sidebar-active-users">
+                <div class="active-users-header">
+                    <i class="fas fa-bolt active-icon"></i>
+                    <h3 class="active-title">Recently Active</h3>
+                </div>
+                <div class="active-users-list">
+                    <!-- This would be populated via AJAX -->
+                    <div class="active-user">
+                        <div class="active-user-avatar">
+                            <img src="https://ui-avatars.com/api/?name=John+Doe&background=random" alt="User">
+                        </div>
+                        <div class="active-user-info">
+                            <span class="active-user-name">John Doe</span>
+                            <span class="active-user-time">2 min ago</span>
+                        </div>
+                        <button class="follow-active-btn">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                    </div>
+                    <!-- More users would be added dynamically -->
+                </div>
+            </div> --}}
         </div>
     </div>
 </section>
@@ -188,6 +266,7 @@
 
     /* Right Sidebar */
     .home-sidebar {
+        display: block;
         width: 320px;
         flex-shrink: 0;
         position: sticky;
@@ -759,7 +838,7 @@
         .home-sidebar {
             width: 100%;
             position: static;
-            display: grid;
+            display: block;
             grid-template-columns: repeat(1, 1fr);
             gap: 24px;
         }
@@ -840,6 +919,512 @@
             text-align: center;
         }
     }
+
+    /* =========================================
+   13. HOME SIDEBAR REDESIGN
+   ========================================= */
+
+.home-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 350px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 100px;
+    height: fit-content;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Custom scrollbar for sidebar */
+.home-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.home-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.home-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(67, 97, 238, 0.3);
+    border-radius: 10px;
+}
+
+/* Profile Card */
+.sidebar-profile-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.sidebar-profile-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(67, 97, 238, 0.15);
+    border-color: var(--primary-color);
+}
+
+/* Avatar Section */
+.sidebar-avatar-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.avatar-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.sidebar-user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--card-bg);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.sidebar-default-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    border: 4px solid var(--card-bg);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.avatar-status {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid var(--card-bg);
+}
+
+.avatar-status.online {
+    background: #4ade80;
+    box-shadow: 0 2px 8px rgba(74, 222, 128, 0.4);
+}
+
+.avatar-status.offline {
+    background: #94a3b8;
+}
+
+/* User Info */
+.sidebar-user-info {
+    flex: 1;
+}
+
+.sidebar-user-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-main);
+    line-height: 1.3;
+    background: linear-gradient(135deg, var(--text-main), var(--primary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.sidebar-user-email {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-user-email i {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.sidebar-join-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-join-date i {
+    font-size: 0.7rem;
+}
+
+/* Stats Grid */
+.sidebar-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(67, 97, 238, 0.05);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.sidebar-stat-card:hover {
+    background: rgba(67, 97, 238, 0.1);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Quick Actions */
+.sidebar-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.quick-action-btn:hover {
+    background: rgba(67, 97, 238, 0.1);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.quick-action-btn i {
+    font-size: 1.2rem;
+}
+
+/* Trending Card */
+.sidebar-trending-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
+}
+
+.trending-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.trending-icon {
+    font-size: 1.2rem;
+    color: #ff6b35;
+    background: rgba(255, 107, 53, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trending-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.trending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.trending-tag-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(67, 97, 238, 0.05);
+    text-decoration: none;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+}
+
+.trending-tag-item:hover {
+    background: rgba(67, 97, 238, 0.1);
+    transform: translateX(5px);
+}
+
+.tag-hashtag {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.tag-name {
+    flex: 1;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+.tag-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: rgba(67, 97, 238, 0.1);
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.view-all-trending {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(67, 97, 238, 0.05);
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.view-all-trending:hover {
+    background: rgba(67, 97, 238, 0.1);
+}
+
+/* Active Users */
+.sidebar-active-users {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color);
+}
+
+.active-users-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.active-icon {
+    font-size: 1.2rem;
+    color: #00d2d3;
+    background: rgba(0, 210, 211, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.active-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.active-users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.active-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.active-user:hover {
+    background: rgba(67, 97, 238, 0.05);
+}
+
+.active-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.active-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.active-user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.active-user-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.active-user-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.follow-active-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary-color);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.follow-active-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .home-sidebar {
+        width: 320px;
+    }
+}
+
+@media (max-width: 992px) {
+    .home-sidebar {
+        width: 100%;
+        position: static;
+        max-height: none;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .sidebar-profile-card,
+    .sidebar-trending-card,
+    .sidebar-active-users {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .home-sidebar {
+        grid-template-columns: 1fr;
+    }
+    
+    .sidebar-stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .sidebar-quick-actions {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .sidebar-quick-actions {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .sidebar-avatar-section {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .sidebar-user-info {
+        text-align: center;
+    }
+}
 </style>
 
 <script>

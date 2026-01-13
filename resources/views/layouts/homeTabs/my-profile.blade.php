@@ -87,16 +87,16 @@
                         <div class="stat-label">Posts</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="myFollowersCount">{{ Auth::user()->followers_count }}</div>
+                        <div class="stat-value">{{ Auth::user()->followers()->count() }}</div>
                         <div class="stat-label">Followers</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">{{ Auth::user()->following_count }}</div>
-                        <div class="stat-label">Following</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">{{ Auth::user()->comments()->count() }}</div>
                         <div class="stat-label">Comments</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ Auth::user()->likes()->count() }}</div>
+                        <div class="stat-label">Likes</div>
                     </div>
                 </div>
                 
@@ -116,9 +116,6 @@
     <div class="profile-tabs">
         <div class="tabs-header">
             <button class="tab-btn active" data-tab="posts">My Posts</button>
-            <button class="tab-btn" data-tab="followers">Followers</button>
-            <button class="tab-btn" data-tab="following">Following</button>
-            <button class="tab-btn" data-tab="activity">Activity</button>
         </div>
         
         <div class="tabs-content">
@@ -1757,24 +1754,56 @@
     }
     
 function copyProfileLink() {
-    const profileUrl = window.location.origin + '/profile/' + {{ Auth::id() }};
-    navigator.clipboard.writeText(profileUrl).then(() => {
-        showToast('Profile link copied to clipboard!', 'success');
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = profileUrl;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
+    // Get current user ID - multiple methods to ensure we get it
+    const userId = {{ Auth::id() ?? 'null' }};
+    
+    // Check if userId is valid
+    if (!userId || userId === 'null') {
+        showToast('Cannot get user ID. Please refresh the page.', 'error');
+        return;
+    }
+    
+    const profileUrl = `${window.location.origin}/profile/${userId}`;
+    
+    // Try to copy to clipboard
+    if (navigator.clipboard && window.isSecureContext) {
+        // Use modern clipboard API if available and secure context
+        navigator.clipboard.writeText(profileUrl).then(() => {
             showToast('Profile link copied to clipboard!', 'success');
-        } catch (e) {
-            showToast('Failed to copy link', 'error');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            fallbackCopyText(profileUrl);
+        });
+    } else {
+        // Fallback for older browsers or insecure contexts
+        fallbackCopyText(profileUrl);
+    }
+}
+
+// Fallback method for copying text
+function fallbackCopyText(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast('Profile link copied to clipboard!', 'success');
+        } else {
+            showToast('Failed to copy link. Please try again.', 'error');
         }
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        showToast('Copy failed. Please copy manually: ' + text, 'error');
+    } finally {
         document.body.removeChild(textArea);
-    });
+    }
 }
     
     // Make showToast available globally
