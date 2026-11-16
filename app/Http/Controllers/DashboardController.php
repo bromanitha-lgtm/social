@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\Like;
 use App\Models\Comment;
 use Carbon\Carbon;
+use App\Http\Controllers\DashboardController;
 
 class DashboardController extends Controller
 {
