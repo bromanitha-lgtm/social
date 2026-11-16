@@ -34,9 +34,14 @@ class HomeController extends Controller
             
             return view('home', compact('posts'));
         } else {
-            // If not logged in, show welcome page
+            // Show only published articles on the public landing page.
             $posts = Post::with('user')
                         ->withCount(['likes', 'comments'])
+                        ->where('status', 'published')
+                        ->where(function ($query) {
+                            $query->whereNull('published_at')
+                                  ->orWhere('published_at', '<=', now());
+                        })
                         ->latest()
                         ->take(3)
                         ->get();
