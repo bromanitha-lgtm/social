@@ -11,7 +11,10 @@
 </head>
 <body>
     <header>
-        <img src="{{ asset('build/assets/svg/mainLogo.svg') }}" alt="Logo" class="logo">
+        <a href="{{ route('home') }}" class="site-brand" aria-label="Article home">
+            <span class="site-brand-icon"><i class="fas fa-book-open" aria-hidden="true"></i></span>
+            <span>Article</span>
+        </a>
         
         <div class="lang-toggle-container">
             <button class="lang-toggle-btn" id="langToggle">

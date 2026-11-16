@@ -34,6 +34,7 @@ class WelcomePageTest extends TestCase
 
         $this->get('/')
             ->assertOk()
+            ->assertSee('Article')
             ->assertSee('A published article')
             ->assertDontSee('A draft article')
             ->assertDontSee('A scheduled article');

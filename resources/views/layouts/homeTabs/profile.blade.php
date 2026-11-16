@@ -58,7 +58,7 @@
             <h3>Skills & Tags</h3>
             <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;" id="skills-container">
                 @php
-                    $skills = ['UI Design', 'Figma', 'HTML/CSS', 'Prototyping', 'JavaScript', 'Laravel', 'PHP', 'MySQL'];
+                    $skills = ['UI Design', 'Figma', 'HTML/CSS', 'Prototyping', 'JavaScript', 'Technical Writing', 'PHP', 'MySQL'];
                 @endphp
                 @foreach($skills as $skill)
                     <span class="skill-tag">{{ $skill }}</span>

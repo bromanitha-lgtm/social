@@ -714,6 +714,31 @@ header img.logo {
     object-fit: contain;
 }
 
+.site-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--primary-color);
+    font-size: 1.45rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.site-brand:hover {
+    color: var(--secondary-color);
+}
+
+.site-brand-icon {
+    display: grid;
+    width: 2.4rem;
+    height: 2.4rem;
+    place-items: center;
+    border-radius: 0.8rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: #fff;
+    font-size: 1.1rem;
+}
+
 header a {
     color: inherit;
 }

@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "article/social",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "A community platform for publishing articles and connecting writers with readers.",
+    "keywords": ["articles", "publishing", "social"],
     "license": "MIT",
     "require": {
         "php": "^8.2",

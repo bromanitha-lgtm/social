@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }} - @yield('title', 'Dashboard')</title>
+    <title>{{ config('app.name', 'Article') }} - @yield('title', 'Dashboard')</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
@@ -646,7 +646,7 @@
             <span class="visually-hidden">Loading...</span>
         </div>
         <h3 class="mt-4 text-light animate__animated animate__pulse">
-            <i class="fas fa-rocket me-2"></i>Loading {{ config('app.name', 'Laravel') }}...
+            <i class="fas fa-rocket me-2"></i>Loading {{ config('app.name', 'Article') }}...
         </h3>
     </div>
 
@@ -656,7 +656,7 @@
             <!-- Brand Logo -->
             <a class="navbar-brand animate__animated animate__fadeInLeft" href="{{ url('/') }}">
                 <i class="fas fa-rocket"></i>
-                <span>{{ config('app.name', 'Laravel') }}</span>
+                <span>{{ config('app.name', 'Article') }}</span>
             </a>
 
             <!-- Mobile Toggle Button -->
@@ -878,7 +878,7 @@
         <div class="container-fluid px-4">
             <div class="row">
                 <div class="col-md-4">
-                    <h5>{{ config('app.name', 'Laravel') }}</h5>
+                    <h5>{{ config('app.name', 'Article') }}</h5>
                     <p class="mb-0">A modern platform for sharing articles and ideas.</p>
                 </div>
                 <div class="col-md-2">
@@ -908,7 +908,7 @@
                         <a href="#" class="text-white fs-5"><i class="fab fa-github"></i></a>
                     </div>
                     <p class="mt-3 mb-0">
-                        &copy; {{ date('Y') }} {{ config('app.name', 'Laravel') }}. All rights reserved.
+                        &copy; {{ date('Y') }} {{ config('app.name', 'Article') }}. All rights reserved.
                     </p>
                 </div>
             </div>
